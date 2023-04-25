@@ -1,0 +1,31 @@
+\documentclass{article}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[a4paper, total={7in, 10in}]{geometry}
+
+\title{Lista 2 - MAC0320}
+\author{Paulo Henrique Albuquerque, NUSP $=12542251$ }
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\textbf{E6.} Seja $G$ um grafo conexo. Prove que quaisquer dois caminhos mais longos em $G$ possuem (pelo
+menos) um vértice em comum.
+\vspace{5mm}
+
+\textbf{Solução.} A prova será por contradição. Suponha que existam dois caminhos mais longos $S_1$ e $S_2$ em $G$ sem nenhum vértice em comum. Sejam $u$ e $v$ vértices quaisquer de $S_1$ e $S_2$, respectivamente. O caminho $S_1$ pode ser particionado em dois caminhos. Um que vai de uma extremidade até o vértice anterior a $u$ em $S_1$ e outro que vai do vértice posterior a $u$ em $S_1$ até a outra extremidade. Esses caminhos têm comprimentos $x-1$ e $y-1$, respectivamente ($x$ e $y$ são as quantidades de vértices nesses caminhos). Podemos definir uma partição análoga para $S_2$, com caminhos de comprimento $w$ e $z$. Seja $S$ o tamanho de um caminhos mais longo em $G$, como $S_1$ e $S_2$ são caminhos mais longos, eles têm comrprimento $S$:
+\[(x-1)+1+1+(y-1)=S\to x+y=S\]
+\[(w-1)+1+1+(z-1)=S\to w+z=S\]
+
+Agora, podemos formar 4 caminhos a partir de $S_1$ e $S_2$: dois que começam numa extremidade de $S_1$ e vai até $u$, depois de $u$ a $v$ e de $v$ a uma das extremidades de $S_2$. Outros dois são formados de forma análoga, começando a partir da outra extremidade de $S_1$. Os comprimentos desses 4 caminhos são: $x+w+1$, $x+z+1$, $y+z+1$, $y+w+1$. A soma desse quatro comprimentos é $2(x+y)+2(w+z)+4=2S+2S+4=4(S+1)$. Segue, portanto, que pelo menos um deles tem comprimento $S+1$. Caso contrário, a soma dos comprimentos seria, no máximo, $4S$. Isso é uma contradição da premissa que um caminho mais longo em $G$ tem comprimento $S$. Segue, então, que dois caminhos mais longos em $G$ tem pelo menos um vértice em comum.
+
+\textbf{E7.} Seja $G$ um grafo simples.  ́E possível que ambos $G$ e  ̄$\barG$ sejam desconexos? Justifique.
+\vspace{5mm}
+
+\textbf{Solução.} Não. Suponha $G$ desconexo. Provaremos que $\bar{G}$ deve ser conexo. Sejam $u$ um vértice da componente $C_i$ de $G$ e $v$ um vértice da componente $C_j$. Em $\bar{G}$, $u$ e $v$ são vizinhos, logo, há um caminho entre eles nesse grafo. Além disso, para qualquer outro vértice $x$ de $C_i$, $v$ é vizinho de $x$. Logo, $u-v-x$ é um caminho em $\bar{G}$. Portanto, em $\bar{G}$, $u$ está conectado com qualquer vértice $v$ de qualquer outra componente $C_j$ de $G$ e com qualquer outro vértice $x$ na mesma componente $C_i$. Ou seja, $u$ está conectado com todos os vértices de $\bar{G}$. Como $u$ é um vértice qualquer, segue que a afirmação acima é válida para todos os vértices do grafo $G$, ou seja, $\bar{G}$ é conexo.
+
+\end{document}
+
