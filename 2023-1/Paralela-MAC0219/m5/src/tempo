@@ -1,8 +1,8 @@
 #!/bin/bash
 
-NUM_EXE=5
+NUM_EXE=1
 
-for N in $(seq 1000 500 3000)
+for N in 256 512 1024 2048 4096 
 do
 
 soma0=0
@@ -21,5 +21,5 @@ media0=$(echo "scale=6;$soma0 / $NUM_EXE" | bc)
 media1=$(echo "scale=6;$soma1 / $NUM_EXE" | bc)
 echo "T(algoritmo 0, $N) = $media0."
 echo "T(algoritmo 1, $N) = $media1."
-echo "Razão T1/T0 = $(echo "scale=3;$media1/$media0" | bc)"
+echo "Razão T0/T1 = $(echo "scale=3;$media0/$media1" | bc)"
 done
