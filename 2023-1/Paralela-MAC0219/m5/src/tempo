@@ -1,0 +1,25 @@
+#!/bin/bash
+
+NUM_EXE=5
+
+for N in $(seq 1000 500 3000)
+do
+
+soma0=0
+soma1=0
+
+for i in $(seq $NUM_EXE)
+do
+  tempo0=$(./main --matrix-size $N --algorithm 0)
+  tempo1=$(./main --matrix-size $N --algorithm 1)
+
+  soma0=$(echo "$soma0 + $tempo0" | bc)
+  soma1=$(echo "$soma1 + $tempo1" | bc)
+done
+
+media0=$(echo "scale=6;$soma0 / $NUM_EXE" | bc)
+media1=$(echo "scale=6;$soma1 / $NUM_EXE" | bc)
+echo "T(algoritmo 0, $N) = $media0."
+echo "T(algoritmo 1, $N) = $media1."
+echo "Razão T1/T0 = $(echo "scale=3;$media1/$media0" | bc)"
+done
