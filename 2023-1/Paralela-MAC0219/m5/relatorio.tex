@@ -3,12 +3,15 @@
 \usepackage{amsmath}
 \usepackage{graphicx} % Required for inserting images
 \usepackage[a4paper, total={7in, 10in}]{geometry}
-
+\usepackage[options]{parskip}
 \newcommand\cha{3}
 
 \title{Mini Ep 5 - Otimizando o uso de cache - parte 1}
 \author{Paulo Henrique Albuquerque, NUSP:12542251}
 \date{2023-04-27}
+
+\setlength{\parskip}{1ex} % espaçamento vertical entre parágrafos
+\setlength{\parindent}{0pt} % recuo horizontal de parágrafos
 
 \begin{document}
 
@@ -72,6 +75,17 @@ A correção do algoritmo é simples e não será feita com detalhes aqui. Basic
 
 \section{Diferentes Maquinas}
 
+O mesmo script mostrado acima foi usado em outra maquina para testarmos o impacto em diferentes maquinas.
 
+Os resultados foram:
+
+\begin{figure}[htpb]
+  \centering
+  \includegraphics[width=0.8\textwidth]{maquina.png}
+  \caption{maquina.png}
+  \label{fig:maquina-png}
+\end{figure}
 
 \end{document}
+
+Como podemos ver, a melhora no tempo também é observado nessa outra maquina.
