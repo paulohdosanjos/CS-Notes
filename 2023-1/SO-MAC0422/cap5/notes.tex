@@ -394,8 +394,62 @@ Uma quarta questão a se considerar é a dificuldade de fazer um backup em um si
 
 Por último, fazer backups introduz problemas não técnicos. O melhor sistema de segurança online pode ser inútil se o administrador do sistema deixa todas as fitas de backup em seu escritório e o deixa aberto e desprotegido toda vez que caminha até o corredor para pegar um café, por exemplo. Problemas desses tipo devem ser evitados. 
 
-Duas estratégias podem ser feitas para backups em fitas: 
+Duas estratégias podem ser feitas para backups em fitas: um \textbf{\textit{dump} físico} ou um \textbf{\textit{dump} lógico}. A primeira estratégia é simples, ela consiste em começar no bloco 0 do disco, escrever todos os blocos na fita e só para quando tiver copiado o último. Um programa que implementa esse processo é tão simples que provavelmente pode ficar 100\% livre de bugs. Mesmo assim, há alguns problemas nessa estratégia. Um deles é que não há valor em incluir no backup blocos inutilizados. Se o programa de \textit{dumping} consegue ter acesso à lista de blocos livres, ele pode evitar incluir blocos inutilizados. No entanto, pular blocos inutilizados implica em manter de alguma forma o número de cada bloco incluido. Outro problema é incluir blocos ruins. Se todos os blocos ruins são remapeados pelo controlador do disco e são escondidos do SO, sem problemas. Por outro lado, se eles são visíveis e mantidos em alguma lista de blocos ruins, é essencial que o programa de dumping tenha acesso essa informação para que não tente ler nenhum bloco ruim. Resumindo, as vantagens de um dump físico são sua simplicidade e eficiência (basicamente, pode rodar na velocidade do disco). As desvantagens são a incapacidade de pular blocos inutilizados, de fazer dumps incrementais e restaurar arquivos individuais. Por esses motivos, a maioria dos sistemas fazem dumps lógicos.
 
+Um \textbf{dump lógico} começa em um ou mais diretórios específicos e recursivamente inclui todos os arquivos e diretórios encontrados que tenham sido modificados desde uma data base.
+
+Para que seja possível restaurar arquivos individuais, todo informação necessária para recriar o caminho ao arquivo deve ser incluida no backup. Ou seja, alguns diretórios não modificados devem ser incluídos, juntos com todos seus atributos que dão as permissões origianais. 
+
+Restaurar um sistema de arquivos a partir de um backup é simples. Para começar, um sistema de arquivos vazio é criado no disco. Então, o último dump completo é restaurado (diretórios primeiro). Depois esse processo é repetido para o primeiro backup incremental realizado após esse último completo, e depois para o próximo, e assim por diante.
+
+Observe que como a lista de blocos livres não é um arquivo (e sim uma lista ligada de blocos em disco) não é possível restaurá-la. Então, é necessário construi-la manualmente após a restauração do sistema de arquivos. Isso é possível já que o conjunto de blocos livres é o complemento do conjunto de blocos utilizados, e esse último conjunto pode ser obtido inspecionando os arquivos restaurados.
+
+\subsubsection{Consistência do sistema de arquivos}
+Muitos sistemas de arquivo leêm blocos, os modificam e escrevem depois. Se o sistema falha antes que TODOS os blocos tenham sido escritos, o sistema de arquivos pode ficar em um estado inconsistente. Esse problema é particularmente crítico quando alguns dos blocos que não foram escritos são blocos de i-nodes, de diretório ou blocos contendo a lista de blocos livres.
+
+A maioria dos computadores tem programas que checam a consistência do sistema de arquivos. Por exemplo, \unix tem o programa \textit{fsck} e o Windows, \textit{chkdsk}. Programas desse tipo podem ser rodados quando o sistema é inicializado, especialmente depois de uma falha. A descrição abaixo refere-se ao funcionamento do programa \textit{fsck}, mas os princípios aqui considerados são gerais para programas desse tipo.
+
+Dois tipos de incosistência são checadas: de blocos e de arquivos. Para checar incosistência de blocos, o programa constrói duas tabelas, cada uma contendo um contador para cada bloco do disco. Todos os contadores são inicializados com 0. Os contadores da primeira tabela guardam quantas vezes o bloco em questão é apontado por um arquivo; os contadores da segunda tabela guardam quantas vezes o bloco está presente na lista de blocos livres (ou no bitmap). O programa varre todos os i-nodes e atualiza os contadores da primeira tabela e varre a lista de blocos livres e atualiza os contadores da segunda tabela. Em seguida, os contadores das duas tabelas são comparados para todos os blocos.
+
+Observe que, se o sistema de arquivos é consistente, cada bloco tem um "1" ou na primeira tabela ou na segunda, conforme a figura abaixo. No entanto, podem haver inconsistências. Anasilemos alguns tipos de incosistência. 
+
+{\color{blue} (b)}
+
+O primeiro tipo é mostrado em (b), em que o bloco 2 não aparece em nenhuma tabela. Isso é reportado como um erro de \textbf{bloco ausente}. Esse é um erro não causa danos ao sistema, porém desperdiçam espaço de disco. A solução é direta: basta adicionar o bloco à lista de blocos livres. É fácil ver um cenário em que isso pode acontecer:
+
+Um arquivo aponta para os blocos 1 e 2 e é o único arquivo do sistema que aponta para o bloco 2, Não preciso mais de alguns dados e o arquivo deverá diminuir de tamanho, então, por exemplo, o bloco 2 será livrado. Portanto, o i-node do arquivo não conterá mais o endereço do arquivo 2. Além disso, o bloco 2 deve ser adicionado à lista de blocos livres. Se imediatamente depois de escrevermos no bloco do i-node do arquivo (removendo o endereço do bloco 2) o sistema falhar, a lista de blocos não será atualizada e, então, o bloco 2 não estará presente. Isso resulta em um erro de bloco ausente. 
+
+{\color{blue} (c)}
+
+O bloco 4 aparece duas vezes na tabela de blocos livre. Duplicatas só podem acontecer em lista ligadas, com bitmap isso é impossível. A solução é simples também: basta reconstruir a lista de blocos livres.
+
+
+
+{\color{blue} (d)}
+Esse é o pior cenário possível: o mesmo bloco presente em dois ou mais arquivos. Isso acontece com o bloco 5 na figura. Se algum desses arquivos for removido, o bloco 5 será colocado na lista de blocos livres, pevando a uma situação em que o mesmo bloco está em uso e na lista de blocos livres ao mesmo tempo. Se ambos os arquivos forem removidos, o arquivo será adicionado duas vezes na lista de blocos livres. A solução apropriada é alocar um bloco livre, copiar o conteúdo do bloco 5 nele e inserir a copia em algum dos arquivos. Dessa forma, o conteúdo dos dois arquivos fica inalterado (apesar de que certamente algum dos dois contém uma informação estranha), mas o sistema de arquivos fica consistente. O erro deve ser reportado, para que o usuário possa tratá-lo.
+
+Outro tipo de checagem é checagem por arquivo. É construida uma tabela que conta, para cada arquivo, a quantidade de vezes que aparece na árvore de arquivos. O contador de cada arquivo é comparado com o número armazenado no i-node. Esses número devem ser iguais. Observe que links simbólicos não fazem o contador no i-node aumentar, somente hard links.
+
+Temos dois tipos de incosistências, quando esses números não concordam.
+
+\begin{itemize}
+  \item Contador no i-node maior que o número de aparições na árvore. Nesse caso, mesmo que todos arquivos sejam excluídos, o contador do i-node será não nulo e, portanto, não será removido. Isso desperdiça espaço de disco.   \item Contador no i-node menor que o número de aparições na árvore. Esse erro pode ser catastrófico. De fato, se alguns arquivos são removidos, o contador do i-node pode chagar a 0, e sendo assim, seus blocos serão liberados. Isso fará que o restante dos arquivos que apontavam para esse i-node sejam efetivamente deletados. 
+\end{itemize}
+
+A solução é corrigir o valor do contador do i-node.
+
+Outros tipos de checagem são possíveis. Exemplos: 
+\begin{itemize}
+  \item se o número de um i-node é maior que o número de i-nodes no disco, algo está errado. 
+  \item modos estranhos de i-nodes, como 0007.
+  \item arquivos localizados em diretórios de usuário, porém pertencentes ao super-usuário e com o bit SETUID ativado. Isso gera problemas de segurança visto que tais arquivos podem adquirir poderes de super-usuário quando executados por qualquer usuário.
+\end{itemize}
+
+Com um pouco de esforço, é possível pensar em uma lista relativamente longa de situações peculiares (tecnicamente legais) que podem ser reportadas.
+
+Alguns sistemas de arquivos protegem o usuário dele mesmo. Por exemplo, um usuário pode querer excluir todos os arquivos objetos de um diretório e rodar rm * .o em vez de rm *.o (observe o espaço no primeiro comnado). Em alguns sistemas, nenhum bloco é retornado à lista de blocos livres até que eles sejam realmente necessários. Isso permite que usuários que percebem o erro rápido o suficiente, rodem programas de "desremoveção" de arquivos. Mecanismos desse tipo são inseguros. Um sistema seguro deveria escrever lixo nos blocos de dados quando um arquivo é removido, para que outro usuário não consiga recuperar informação.
+
+\subsection{Performance do sistema de arquivos}
 \end{document}
 
 
