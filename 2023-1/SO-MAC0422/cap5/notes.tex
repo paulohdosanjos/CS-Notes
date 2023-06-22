@@ -428,6 +428,15 @@ O bloco 4 aparece duas vezes na tabela de blocos livre. Duplicatas só podem aco
 {\color{blue} (d)}
 Esse é o pior cenário possível: o mesmo bloco presente em dois ou mais arquivos. Isso acontece com o bloco 5 na figura. Se algum desses arquivos for removido, o bloco 5 será colocado na lista de blocos livres, pevando a uma situação em que o mesmo bloco está em uso e na lista de blocos livres ao mesmo tempo. Se ambos os arquivos forem removidos, o arquivo será adicionado duas vezes na lista de blocos livres. A solução apropriada é alocar um bloco livre, copiar o conteúdo do bloco 5 nele e inserir a copia em algum dos arquivos. Dessa forma, o conteúdo dos dois arquivos fica inalterado (apesar de que certamente algum dos dois contém uma informação estranha), mas o sistema de arquivos fica consistente. O erro deve ser reportado, para que o usuário possa tratá-lo.
 
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.6\textwidth]{img/5-19.png}
+  \end{center}
+  \caption{}
+  \label{fig:}
+\end{figure}
+
+
 Outro tipo de checagem é checagem por arquivo. É construida uma tabela que conta, para cada arquivo, a quantidade de vezes que aparece na árvore de arquivos. O contador de cada arquivo é comparado com o número armazenado no i-node. Esses número devem ser iguais. Observe que links simbólicos não fazem o contador no i-node aumentar, somente hard links.
 
 Temos dois tipos de incosistências, quando esses números não concordam.
@@ -450,6 +459,111 @@ Com um pouco de esforço, é possível pensar em uma lista relativamente longa d
 Alguns sistemas de arquivos protegem o usuário dele mesmo. Por exemplo, um usuário pode querer excluir todos os arquivos objetos de um diretório e rodar rm * .o em vez de rm *.o (observe o espaço no primeiro comnado). Em alguns sistemas, nenhum bloco é retornado à lista de blocos livres até que eles sejam realmente necessários. Isso permite que usuários que percebem o erro rápido o suficiente, rodem programas de "desremoveção" de arquivos. Mecanismos desse tipo são inseguros. Um sistema seguro deveria escrever lixo nos blocos de dados quando um arquivo é removido, para que outro usuário não consiga recuperar informação.
 
 \subsection{Performance do sistema de arquivos}
+Acesso ao disco é muito mais lenta que o acesso à memória. Ler um palavra na memória pode demorar 10 nsec. Leituras ao disco podem acontecer a 10B/sec, o que é 40 vezes mais devagar por palavra de 32 bits, e isso deve ser adicionado de 5-10 msec referente ao seek. Se uma única palavra é necessária, o acesso à memória é da ordem de 1 milhão de vezes mais rápido que o acesso ao disoc. Então, muitos sistemas de arquivos foram escritos com várias otimizações para melhorar o desempenho.
+
+\subsubsection{Cache}
+
+A técnica mais comum usada para reduzir acesso ao disco é o \texttbf{cache de bloco}. Nesse contexto, um cache é uma coleção de blocos que logicamente pertencem ao disco mas são mantidos em memória para melhorar desempenho.
+
+Vários algoritmos podem ser usados para lidar com o cache, mas o mais comum é checar todas as chamadas de \verb|read| para ver se os blocos necessários estão no cache. Caso esteja, não é necessário acessos ao disoc. Caso contrário, o bloco é lido do disco para o cache e depois copiada para aonde for pedido. Pedidos subsequentes de leitura do mesmo bloco são feitos usando o bloco no cache.
+
+O jeito usual de verificar se um dado bloco está no cache é usando uma tabela de hash. Quando um bloco é carregado em um cache cheio, algum bloco deve ser movido (e escrito no disco se foi modificado desde que foi movido para o cache) e todos os algoritmos usuais de substituição de páginas de memória podem ser usados. Uma coisa boa diferente entre paginação e o processo de cache de blocos é que referências de cache são relativamente infrequentes, então é factível deixar todos os blocos na ordem LRU (Least Recently Used) exata com listas ligadas.
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.45\textwidth]{img/5-20.png}
+  \end{center}
+  \caption{}
+  \label{fig:}
+\end{figure}
+
+Acontece que a ordem LRU não é desejada nesse caso. Se um bloco crítico, como um i-node, é trazido ao cache e modificado, mas não escrito ao disco, uma falha pode deixar o sistema num estado incosistente. Se o bloco de i-node for colocado no final da lista LRU, pode demorar um pouco a atingir o começo e ser reescrito no disco.
+
+Além disso, alguns blocos, como blocos de i-nodes, raramente são referenciados duas vezes em um intervalo de tempo curto. Essas considerações levaram a um esquema LRU modificado, levando dois fatores em consideração:
+\begin{itemize}
+  \item É provável que o bloco seja requerido denovo em breve?
+  \item O bloco é essencial para a consistência do sistema de arquivos?
+\end{itemize}
+
+Blocos que provavelmente não serão requeridos em breves são colocados no começo, então, seus buffers serão usados rapidamente. Já os blocos que devem ser requeridos são colocados no final, e ficarão um tempinho por ali.
+
+A segunda questão é independente da primeira. Se um bloco é essencial para a consistência (basicamente, tudo menos dados) e foi modificado, ele deve ser escrito no disco imediatamente, independente de sua posição na lista LRU. Isso reduz o risco de uma falha quebrar o sistema de arquivos.
+
+Mesmo assim, não é desejável manter dados de blocos na cache por muito tempo antes de escrevê-los em disco. Considere um escritor escrevendo um livro num editor de texto. Mesmo que periodicamente o escritor diga ao editor para escrever o arquivo sendo editado no disco, há uma boa chance de tudo ainda estar no cache e nada no disco. Se o sistema falhar, a estrutura do sistema de arquivos não será corrompida, mas o dia de trabalho do escritor será desperdiçado. 
+
+No \unix, há uma chamada de sistema, \verb|sync| que força todos blocos modificados serem escritos em disco imediatamente. Quando o sistema é inicializado, um programa, geralmente chamado \textit{update} é colocado para rodar em segundo plano. Ele roda um loop infinito requerindo chamadas \verb|sync| e dormindo por 30 segundos entre chamadas. Como resultado, não mais que 30 segundos de trabalho é perdido devido a falhas de sistemas.
+
+O jeito Windows é escrever todo bloco modificado imediatamente. Caches em que todos os blocos modificados são escritos no disco imediatamente são chamados de \textbf{caches write-through}. A diferença desses métodos pode ser exemplificada da seguinte forma. Suponha que queremos escrever um bloco de 1-KB, um caractere de cada vez. \unix irá coletar todos os caracteres no cache e escrever o bloco a cada 30 segundos, ou toda vez que o bloco é removido do cache (cache \textbf{write-back}). O Windows vai fazer um acesso ao disco a cada caractere escrito. Evidentemente, a maioria dos programas fazem um buffering interno, então normalmente eles não escrevem um caractere e sim uma linha inteira ou uma unidade maior a cada chamada \verb|write|.
+
+Outro ponto relacionado a estratégias de caches é a decisão de alocar um bloco de cache ou não quando temos um cache miss na escrita. Geralmente, é usado write-back com write-allocation (com esperança de futuras escritas no mesmo bloco) e write-through sem write-allocation (como o bloco é escrito imediatamente, não há vantagens em futuras escritas). 
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.9\textwidth]{img/cache.jpg}
+  \end{center}
+  \caption{}
+  \label{fig:}
+\end{figure}
+
+
+
+Uma consequência dessa diferença de estratégias de caching (\texbf{write-back} e \textbf{write-through}) é que remover um disco floppy de um sistema \unix sem ffazer uma \verb|sync| provavelmente resultará em dados perdidos e frequentemte um sistema de arquivos corrompido. No Windows, isso não acontece. Essas diferentes estratégias foram escolhidas porque o \unix foi desenvolvido numa ambiente onde quase todos os discos eram discos rígidos, enquanto o Windows foi desenvolvido num ambiente de discos floppy. A medida que discos rígidos viraram regra, o método \unix, com sua melhor eficiência, virou regra e é hoje também utilizado pelo Windows para discos rígidos.
+
+\subsection{Prefetch}
+
+A segunda técnica para melhorar o desempenho do sistema de arquivo é tentar colocar blocos no cache antes deles serem requisitados para aumentar a taxa de cache hit.
+
+Certamente, essa estratégia de \textbf{prefetch} só funciona bem se o arquivo está sendo lido sequencialmente. Se o arquivo está lendo aleatoriamente, isso na verdade é prejudicial pois blocos desnecessários são lidos e substituem potenciais blocos úteis no cache.
+
+Para decidir se vale a pena fazer prefetch, o sistema de arquivos pode manter padrões de acessos para os arquivos. Inicialmente, o arquivo é dado o "benefício da dúvida" e é colocado no modo "acesso sequencial". No entanto, sempre que um seek é feito, esse bit é desativado. Se leituras sequenciais são feitas posteriormente, o bit é ativado novamente.
+
+\subsubsection{Reduzindo Movimentos de braço de disco}
+
+Outra forma importante de otimização é a redução de movimento do braço do disco ao colocar blocos que são prováveis de ser acessados em sequência próximos entre si, preferencialmente no mesmo cilindro.
+
+Quando um arquivo de saída é escrito, o sistema de arquivos deve alocar os blocos um de cada vez, a medida que são necessários. Se os blocos livres são mantidos num bitmap, e todo o bitmap está em memória, é fácil suficiente escolher um bloco livre mais perto possível do bloco anterior. Com uma lista ligada, na qual parte está no disco, isso é bem mais difícil. Mesmo assim, é possível.
+
+(verificar essa parte no livro traduzido, não entendi totalmente)
+O truque é manter o uso de disco não em blocos e sim em grupos de blocos consecutivos. Se setores consistem em 512 bytes, o sistema poderia usar blocos de 1-KB (2 setores) mas alocar espaço em disco em unidades de dois blocos (4 setores). Isso não é o mesmo que ter blocos de 2-KB, já que o cache continuaria usando blocos de 1-KB e as transferências de disco continuariam 1-KB, mas ler um arquivo sequencialmente num sistema ocioso reduziria o número de seeks por um fator de dois, o que é uma melhoria considerável.
+
+Outro gargalo em sistemas que usa algo parecido com i-nodes é que as leituras em arquivos pequenos requer dois acessos: um para o i-node e outro para o bloco. Todos os i-nodes estão perto do começo do disco, confrme a figura abaixo. Então, a distância média entre um i-node e seus blocos é aproximadamente metade do número de cilindros, o que requer seeks longos.
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.6\textwidth]{img/5-21.png}
+  \end{center}
+  \caption{}
+  \label{fig:}
+\end{figure}
+
+Uma melhoria fácil é colocar os i-nodes no meio do disco, em vez do começo. Isso reduz o seek médio pela metade. Outra ideia, mostrada em (b), é dividir o disco em grupos de cilindros, cada um com seus próprios i-nodes, blocos e lista de blocos livres. Quando se cria um arquivo, qualquer i-node pode ser escolhido, mas é feita uma tentativa de achar um bloco no mesmo grupo de cilindro do i-node. Se nenhum estiver disponível, então um bloco em um cilindro próximo é usado.
+
+\subsection{Sistema de arquivos estruturado por log}
+
+Mudanças na tecnologia estão colocando pressão nos sitemas operacionais atuais. Em particular, CPU estão ficando mais rápidas e memória crescendo exponencialmente. Enquanto isso, o tempo de seek em disco está estagnado. Devido a esse gargalo, pesquisas feitas em Berkley tentaram aliviar esse problema ao construir um novo tipo de sistemas de arquivos, \textbf{LFS (Log-structured File System)}. Descrevemos como esse sistema funciona.
+
+Por causa dos avanços citados acima, caches de disco estão crescendo rapidamente. Consequentemente, é possível satisfazer uma fração substencial de todos os pedidos de leitura direto do cache, sem precisar acessar o disco. Por essa observação, a maioria dos acessos aos discos serão de escrita, no futuro. Então, o uso do mecanismo de prefetch não aumentará muito o desempenho.
+
+Além disso, vale ressaltar que a maioria das escritas em discos são feitas em pequenos arquivos. Escritas em arquivos pequenos são extremamente ineficientes, já que uma escrita de 50$\mu$sec geralmente é precedida por um seek de 10-msec e um delay rotacional de 4-msec. Um exemplo de escrita comum em um arquivo pequeno é a criação de um novo arquivo num sistem \unix. Para escrever esse arquivo, o i-node do diretório, o bloco do diretório, o i-node do arquivo e o próprio arquivo precisam todos ser escritos. É verdade que essas escritas podem ser "deixadas pra depois", mas isso expõe o sistema a problemas de inconsistência. Por essa razão, escritas em i-nodes são feitas, de forma geral, imediatamente.
+
+A ideia básica é estruturar o arquivo como um log. Periodicamente, e também quando há uma necessidade especial, todos as escritas pendentes que estão no buffer da memória são coletadas num único segmento e escritas no disco como um único segmento contíguo no final do log. Um único segmento pode conter, então, i-nodes, blocos de diretório, bloco de dados e outros tipos de blocos todos misturados. No começo de cada segmento há um sumário do segmento, dizendo o que pode ser encontrado no segmento. Se o segmento médio pode ser feito com tamanho aproximadamente 1 MB, quase todo o disco pode ser utilizado.
+
+Nesse design, i-nodes podem continuar existindo e tem a mesma estrutura que no \unix, mas agora eles estão espalhados por todo o log, em vez de estarem numa posição fixa no disco. Mesmo assim, quando um i-node é localizado, localizar os blocos é feito da maneira usual. Evidentemente, localizar i-nodes agora é mais difícil, já que seu endereço não pode ser calculado pelo seu número, como no \unix. Para ser possível localizar i-nodes, é preciso de um mapa de i-nodes. O mapa é mantido no disco, mas as partes mais usadas podem ser mantidas na memória para aumentar o desempenho.
+
+Se os discos fossem infinitamente grandes, a descrição acima seria a história completa. No entanto, discos são finitos e o log poderá eventualmente ocupar todo o disco. Felizmente, muitos segmentos contêm blocos que não são mais necessários.
+
+Para lidar com isso, o LFS tem um \textbf{cleaner} que tem a função de escanear o log circularmente para compactá-lo. Ele verifica por blocos em desuso nos segmentos. Caso há dados vivos, eles vão para a memória para reescrevê-los num próximo segmento. Os segmentos livrados são marcados, para que o log possa usá-lo para novos dados.
+
+Em resumo, o disco é um grande buffer circular, com a thread de escrita adicionando novos segmentos no início e o cleaner removendo antigos de trás.
+
+Perceba que esse método não é trivial. Quando um bloco de um arquivo é escrito de volta em algum novo segmento, o i-node do arquivo, que está em algum lugar do log, deve ser encontrado e atualizado, e colocado na memória para ser escrito no próximo segmento. O mapade i-nodes também deve ser atualizado para apontar para a nova entrada. Apesar dessa complexidade, os resultados de desempenho mostram que esse esquema vale a pena. Medidadas feitas no artigo publicado (https://people.eecs.berkeley.edu/~brewer/cs262/LFS.pdf) mostram que o LFS supera o unix em uma ordem de magnitude em escritas pequenas, enquanto tem desempenho semelhante para escritas grandes.
+
+
+
+
+
 \end{document}
+
+
 
 
