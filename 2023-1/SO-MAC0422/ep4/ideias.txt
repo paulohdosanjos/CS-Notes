@@ -1,0 +1,6 @@
+-Acredito que seja necessário somente até a seção 5.3 do livro para entender a parte teórica.
+
+-Devo ler a seção 5.7 de implementação para insights adicionais
+
+-O enunciado contêm algumas dicas valiosas: elas foram grifadas de verde (cyan + yellow no okular) no arquivo pdf
+
