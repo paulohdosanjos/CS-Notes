@@ -1,4 +1,5 @@
 #include <cmath>
+#include <string>
 
 #ifndef STACK_H
 #define STACK_H
@@ -46,7 +47,9 @@ template<class T> class Stack{
 
     T Top() const; 
     
-    void  Show();
+    std::string  Show();
+
+    std::string  Show_Int();
 
     unsigned int Size() const;
 
@@ -55,6 +58,7 @@ template<class T> class Stack{
     T K(unsigned int k) const;
 
   private:
+
     Node<T> *top;
     
     //somente para teste

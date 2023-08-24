@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cmath>
+#include <string>
+#include <chrono>
 #include "stack-mod.h"
 
 typedef Stack<char> pilha;
@@ -40,19 +42,40 @@ Stack<T> Stack<T>::Push(const T x){
 }
 
 template<class T>
-void Stack<T> :: Show(){
+std::string Stack<T> :: Show(){
+  //supõe char
   unsigned int size = Size();
 
-  std::cout << "(" << size << ") ";
+  std::string output = std::string();
+
+  output = output + "(" + std::to_string(size) + ") ";
   Node<T> *x = top;
   for(int i = 0; i < size; i++){
-    std::cout << x->val << " ";
+    output = output + x->val + " ";
     x = x->jump[0];
   }
 
-  std::cout << "\n";
+  output = output + "\n";
+  return output;
 }
 
+template<class T>
+std::string Stack<T> :: Show_Int(){
+  //supõe int
+  unsigned int size = Size();
+
+  std::string output = std::string();
+
+  output = output + "(" + std::to_string(size) + ") ";
+  Node<T> *x = top;
+  for(int i = 0; i < size; i++){
+    output = output + std::to_string(x->val) + " ";
+    x = x->jump[0];
+  }
+
+  output = output + "\n";
+  return output;
+}
 template<class T>
 void Stack<T>::PrintJumpList(Node<T> *u) const{
   unsigned int size =  (u->depth == 0 ? 0 : 1 + (int)(floor(log2(u->depth))));
@@ -86,7 +109,21 @@ template<class T>
 unsigned int Stack<T>::Size() const{ return top->depth; }
 
 template<class T>
-T Stack<T>::K(unsigned  int k) const {} 
+T Stack<T>::K(unsigned  int k) const {
+  std::cout << "Query: K-th(" << k << ")\n";
+  Node<T>* x = top;
+  unsigned int leftmost_index = (int)(floor(log2(k)));
+  unsigned int mask = 1 << (leftmost_index);
+  for(int i = leftmost_index; i >= 0; i--, mask >>= 1){
+    //std::cout << "leftmost_index " << i << std::endl;
+    //std::cout << "mask " << mask << std::endl;
+    if(k & mask){
+      x = x->jump[i];
+    }
+  }
+
+  return x->val;
+} 
 
 template<class T>
 void Stack<T>::BuildJumpList(Node<T>* u, Node<T>* parent, unsigned int size){
@@ -102,43 +139,137 @@ void Stack<T>::BuildJumpList(Node<T>* u, Node<T>* parent, unsigned int size){
 
 }
 
-
-int main(){
+void Teste1(){
+//Testes genéricos
   pilha p0 = pilha();
   std::cout << "p0: "; //p0: 
-  p0.Show();
+  std::cout << p0.Show();
 
   pilha p1 = p0.Push('a'); //p1: a
   std::cout << "p1: ";
-  p1.Show();
+  std::cout << p1.Show();
 
   pilha p2 = p1.Push('b'); //p2: b a
   std::cout << "p2: ";
-  p2.Show();
+  std::cout << p2.Show();
 
   pilha p3 = p2.Push('c'); //p3: c b a
   std::cout << "p3: ";
-  p3.Show();
+  std::cout << p3.Show();
 
   pilha p4 = p3.Pop();
   std::cout << "p4: "; //p4: b a
-  p4.Show();
+  std::cout << p4.Show();
 
   pilha p5 = p4.Pop(); //p5: a
   std::cout << "p5: ";
-  p5.Show();
+  std::cout << p5.Show();
 
   pilha p6 = p5.Pop(); //p6: 
   std::cout << "p6: ";
-  p6.Show();
+  std::cout << p6.Show();
 
   pilha p7 = p3.Push('d'); //p7: d c b a
   std::cout << "p7: ";
-  p7.Show();
+  std::cout << p7.Show();
 
-  //Looking sharp
-  
+  //Resultado: OK
+}
 
-  //Testar K-th() e Size(), implementar com Skew Binary
+
+void Teste2(){
+  //Testa K-th()
+  pilha p = pilha();
+  p = p.Push('a');
+  p = p.Push('b');
+  p = p.Push('c');
+  p = p.Push('d');
+  p = p.Push('e');
+  p = p.Push('f');
+  p = p.Push('g');
+  p = p.Push('h');
+  p = p.Push('i');
+  p = p.Push('j');
+  p = p.Push('k');
+  p = p.Push('l');
+  p = p.Push('m');
+  p = p.Push('n');
+  p = p.Push('o');
+  p = p.Push('p');
+  p = p.Push('q');
+  p = p.Push('r');
+  p = p.Push('s');
+  p = p.Push('t');
+  p = p.Push('u');
+  p = p.Push('v');
+  p = p.Push('w');
+  p = p.Push('x');
+  p = p.Push('y');
+  p = p.Push('z');
+  std::cout << p.Show();
+
+  //Algumas queries de LA
+  std::cout << p.K(1) << std::endl;
+  std::cout << p.K(2) << std::endl;
+  std::cout << p.K(3) << std::endl;
+  std::cout << p.K(4) << std::endl;
+  std::cout << p.K(5) << std::endl;
+  std::cout << p.K(6) << std::endl;
+  std::cout << p.K(7) << std::endl;
+  std::cout << p.K(8) << std::endl;
+  std::cout << p.K(9) << std::endl;
+  std::cout << p.K(10) << std::endl;
+  std::cout << p.K(11) << std::endl;
+  std::cout << p.K(12) << std::endl;
+  std::cout << p.K(13) << std::endl;
+  std::cout << p.K(14) << std::endl;
+  std::cout << p.K(15) << std::endl;
+  std::cout << p.K(16) << std::endl;
+  std::cout << p.K(17) << std::endl;
+  std::cout << p.K(18) << std::endl;
+  std::cout << p.K(19) << std::endl;
+  std::cout << p.K(20) << std::endl;
+  std::cout << p.K(21) << std::endl;
+  std::cout << p.K(22) << std::endl;
+  std::cout << p.K(23) << std::endl;
+  std::cout << p.K(24) << std::endl;
+  std::cout << p.K(25) << std::endl;
+
+  //Resultado: OK
+}
+
+void Teste3(int SIZE){
+  //teste K-th() para pilha grande
+
+
+  Stack<int> p = Stack<int>();
+  for(int i = 0 ; i < SIZE ; i++){
+    p = p.Push(i);
+  }
+
+  //std::cout << p.Show_Int();
+
+  auto start = std::chrono::high_resolution_clock::now();
+
+  std::cout << p.K(1) << std::endl;
+  std::cout << p.K((int)SIZE/2) << std::endl;
+  std::cout << p.K((int)(2*SIZE/3)) << std::endl;
+  std::cout << p.K(SIZE-1) << std::endl;
+      
+  auto end = std::chrono::high_resolution_clock::now();
+
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+  std::cout << "tempo das queries: " << duration << " micro segundos" << std::endl;
+
+  //Resultado: Rápido independente do tamanho da pilha. O que é de esperar pois K-th roda em tempo O(log(k))
+
+}
+
+
+int main(){
+  //Teste1();
+  //Teste2();
+  //Teste3(10000000);
 
 }
