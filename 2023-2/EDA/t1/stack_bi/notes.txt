@@ -1,0 +1,18 @@
+A única função da classe Node é fornecer um container para a classe Stack.
+
+Então, o construtor de Node() deve ser minimal e é a classe Stack que deve construir a "jump list" de um novo nó, através da função BuildJumpList(). O construtor deve saber quanto espaço alocar para a lista. Quais parâmetros colocar no construtor do Node? Somente uma informaçõe é necessária para construir a lista: o tamanho da lista
+
+O Node novo pode então ser inicializado assim:
+
+  val = x
+  jump-list = || | | |...| | --> tamanho = "log da profundidade do novo nó"
+
+Cada nó tem na sua jump list todos os nós acima na árvore, incluindo a raiz e ele mesmo.
+
+O tamanho da lista (profundidade do novo nó mais u) pode ser determinado pela profundidade do pai, isso é feito pela classe Stack. Isso deixa o código da classe auxiliar Node mais genérico e simples, como deveria ser.
+
+Como é o nó da raiz? Um nó com um valor arbitrário, profundidade zero e jumplist de tamanho 1, com ponteiro para a própria raiz.
+
+
+No programa stack-mod, a jump list de um nó não inclui ele mesmo. A a raiz contém uma jumplist vazia. Então, jump[i] é o 2**i-ésimo ancestral, correspondente a 2**i pulos a partir do nó.
+

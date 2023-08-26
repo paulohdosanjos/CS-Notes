@@ -1,0 +1,1 @@
+Agora, cada o nó u tem dois apontadores: um para seu pai e outro para seu ancestral de nível k, onde k = J(D(u)), onde D(x) é a profundidade do nó u. Dessa forma, as operações de Push() e Pop() levam tempo O(1). Agora, o método BuildJumpList() é substituido pelo método BuildJumpPointer(), cuja função é cálcular J(D(u)) com base no apontador do seu pai.
