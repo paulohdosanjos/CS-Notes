@@ -78,6 +78,11 @@ unsigned int Stack<T> :: Size() const { return top->depth; }
 // Implementação usando representação skew binary
 template<class T>
 T Stack<T> :: K(unsigned  int k) const {
+  return LA(k-1);
+}
+
+template<class T>
+T Stack<T> :: LA(unsigned  int k) const {
   Node<T>* x = top;
   unsigned int desired_depth = x->depth - k;
 

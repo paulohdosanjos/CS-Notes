@@ -50,6 +50,7 @@ template<class T> class Stack {
 
   private:
 
+    T LA(unsigned  int k) const; 
     Node<T> *top;
 
     Stack(Node<T> *n); 
