@@ -1,7 +1,8 @@
+#include <iostream>
 #include <string>
 
-#ifndef STACK_H
-#define STACK_H
+#ifndef STACK_SKEW_H
+#define STACK_SKEW_H
 
 template<class T> class Node {
   public:
@@ -10,7 +11,7 @@ template<class T> class Node {
     Node* parent;
     Node* jump;
     
-    Node(const T val, unsigned int depth_new_node): val(val), depth(depth_new_node) {};
+    Node(const T val, unsigned int depth_new_node): val(val), depth(depth_new_node) {}
     
     // Construtor para a raiz
     Node(){
@@ -21,13 +22,11 @@ template<class T> class Node {
 
 };
 
-template<class T> class Stack{
+template<class T> class Stack {
 
   public:
 
     Stack();
-
-    Stack(Node<T> *n); 
 
     Stack Push(const T x);
         
@@ -53,6 +52,10 @@ template<class T> class Stack{
 
     Node<T> *top;
 
+    Stack(Node<T> *n); 
+
 };
+
+#include "stack_skew.cpp"
 
 #endif
