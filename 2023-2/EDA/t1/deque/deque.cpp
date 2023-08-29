@@ -1,6 +1,8 @@
 #include "deque.h"
 #include <string>
 
+typedef Deque<char> fila;
+
 template<class T>
 Deque<T> :: Deque(){
   first = nullptr;
@@ -15,6 +17,7 @@ Deque<T> :: Deque(Node<T>* new_first, Node<T>* new_last){
 
 template<class T>
 T Deque<T> :: Front() const {
+  //if(first == nullptr) std::cout << "NULLPTR!\n";
   return first->val;
 }
 
@@ -25,10 +28,15 @@ T Deque<T> :: Back() const {
 
 // Constrói campos parent e jump de um nó u com pai u_parent
 template<class T>
-void Deque<T> :: BuildJumpPointer(Node<T>* u, Node<T>* u_parent) {
+void Deque<T> :: BuildJumpPointer(Node<T>* u, Node<T>* const u_parent) {
   u->parent = u_parent;
-  Node<T>& x = u_parent;
-  if (x->jump != nullptr && x->jump->depth != 0 && x->depth - x->jump->depth == x->jump->depth - x->jump->jump->depth)
+  Node<T>* x = u_parent;
+  if(x == nullptr){ // Primeiro nó
+    //u->jump = nullptr; // Quero isso?
+    u->jump = u;
+    return;
+  }
+  if (x->jump != nullptr && x->depth - x->jump->depth == x->jump->depth - x->jump->jump->depth)
       u->jump = x->jump->jump;
   else
       u->jump = x;
@@ -41,11 +49,30 @@ Deque<T> Deque<T> :: Swap() {
 
 template<class T>
 Deque<T> Deque<T> :: PushFront(T x) {
+  if(first == nullptr) { // Fila vazia
+    //std::cout << "fila vazia, criando primeiro nó\n";
+    Node<T>* u = new Node<T>(x,1); 
+    //std::cout << "nó criado, construindo ponteiros do primeiro nó\n";
+    BuildJumpPointer(u,first);
+    //std::cout << "apontadores criados!\n";
+    //std::cout << u->val << std::endl;
+    return Deque<T>(u,u);
+  } 
+
   unsigned new_depth = first->depth + 1;
-  Node<T>* u = new Node(x,new_depth);
+  Node<T>* u = new Node<T>(x,new_depth);
+  //std::cout << "criando nó " << u->val << "\n";
   BuildJumpPointer(u,first);
+  //std::cout << "apontadores criados!\n";
   return Deque(u, last);
 }
+
+// Constrói apontadores parent e jump para o primeiro nó da estrutura
+// template<class T>
+// void Deque<T> :: BuildFirstPointer(Node<T>* new_first) {
+//   new_first->parent = first;
+//   new_first->jump = nullptr;
+// }
 
 template<class T>
 Deque<T> Deque<T> :: PushBack(T x) {
@@ -54,7 +81,7 @@ Deque<T> Deque<T> :: PushBack(T x) {
 
 // Level ancestor k do nó u
 template<class T>
-Node<T>* Deque<T> :: LA(Node<T>* u, unsigned int k) {
+Node<T>* Deque<T> :: LA(Node<T>* const u, unsigned int const k) const {
   Node<T>* x = u;
   unsigned int desired_depth = x->depth - k;
 
@@ -70,8 +97,11 @@ Node<T>* Deque<T> :: LA(Node<T>* u, unsigned int k) {
 
 // Lowest Commum Ancestor de u e v
 template<class T>
-Node<T>* Deque<T> :: LCA(Node<T>* u, Node<T>* v) {
-  // Quero que u aponte para o nó mais fundo
+Node<T>* Deque<T> :: LCA(Node<T>* const  _u, Node<T>* const _v) const {
+  //std::cout << "LCA(" << _u->val << "," << _v->val << "):" << std::endl;
+  Node<T>* u = _u;
+  Node<T>* v = _v;
+  // Quero que u aponte para o nó mais fundo entre u e v
   if(u->depth < v->depth){
     Node<T>* tmp = v;
     v = u;
@@ -80,8 +110,11 @@ Node<T>* Deque<T> :: LCA(Node<T>* u, Node<T>* v) {
 
   // Subo u para a profundidade de v
   u = LA(u, u->depth - v->depth);
+  //std::cout << "novo u : " << u->val << "\n";
 
-  // Subo os dois simultaneamente até encontrar o LCA. Ele será o primeiro nó tal que pai do apontador u coincide com o pai do apontador v
+  // Subo os dois simultaneamente até encontrar o LCA. Ele será o primeiro nó tal que o pai do apontador u coincide com o pai do apontador v
+
+  if(u == v) return u; // Já achei, engloba o caso em que v é o LCA 
   
   while(u->parent != v->parent) {
     if(u->jump != v->jump) {
@@ -93,6 +126,9 @@ Node<T>* Deque<T> :: LCA(Node<T>* u, Node<T>* v) {
       v = v->parent;
     }
   }
+  //std::cout << "Dentro de LCA(): " << "\n";
+
+  //std::cout << (u == nullptr ? "NULLPRT" : "OK");
   return u->parent;
 }
 
@@ -125,17 +161,20 @@ T Deque<T> :: K(unsigned int k) const {
   Node<T>* mid = LCA(first,last);
   unsigned int l1,l2;
   l1 = first->depth - mid->depth + 1; // Número de nós entre first e mid, incluindo first e mid
-  l2 = last->depth - mid->depth - 1; // Númeor de nós entre last e mid, incluindo last e excluindo mid 
-
+  l2 = last->depth - mid->depth; // Número de nós entre last e mid, incluindo last e excluindo mid 
+  //std::cout << "Dentro de K() : \n";
+  //std::cout << first->depth << " " << mid->depth << " " <<  last->depth << "\n";
+  //std::cout << "l1 " << l1 << " l2 " << l2 << std::endl;
   if(k <= l1)
-    return LA(first,k-1);
+    return LA(first,k-1)->val;
   else
-    return LA(last, l1 + l2 - k);
+    return LA(last, l1 + l2 - k)->val;
 }
 
 template<class T>
 std::string Deque<T> :: Print() const {
   Node<T>* mid = LCA(first, last);
+  //std::cout << "LCA calculado!" << std::endl;
   std::string output = std::string();
   Node<T>* x = first;
 
@@ -147,6 +186,7 @@ std::string Deque<T> :: Print() const {
   } 
   // Imprimo de last a mid, excluindo mid, na ordem reversa
   unsigned int n2 = last->depth - mid->depth; // Número de nós a serem impressos nesse segundo segmento
+  //std::cout << n1 << " " << n2 << std::endl;
   Node<T>** list = new Node<T>*[n2]; // Pilha para guardar nós na ordem reversa
   x = last;
   for(int i = n2 - 1; i >= 0; i--) {
@@ -158,4 +198,128 @@ std::string Deque<T> :: Print() const {
 
   return output;
   
+}
+
+template<class T>
+void Deque<T> :: Print_cout() const {
+  Node<T>* mid = LCA(first, last);
+  //std::cout << "LCA calculado\n";
+  //std::cout << (mid == nullptr ? "mid nullptr!!" : "OK");
+  //std::cout << "LCA calculado : " << mid->val << std::endl;
+  Node<T>* x = first;
+
+  // Imprimo de first à mid, incluindo mid
+  unsigned int n1 = first->depth - mid->depth + 1; // Número de nós a serem impressos nesse primeiro segmento
+  for(int i = 0; i < n1; i++) {
+    std::cout << x->val << " ";
+    x = x->parent;
+  } 
+  // Imprimo de last a mid, excluindo mid, na ordem reversa
+  unsigned int n2 = last->depth - mid->depth; // Número de nós a serem impressos nesse segundo segmento
+  Node<T>** list = new Node<T>*[n2]; // Pilha para guardar nós na ordem reversa
+  x = last;
+  for(int i = n2 - 1; i >= 0; i--) {
+    list[i] = x;
+    x = x->parent;
+  } 
+  for(int i = 0; i < n2; i++)
+    std::cout << list[i]->val << " ";
+
+  std::cout << std::endl;
+
+}
+// Somente para fins de depuração, é chamada apenas pela função Teste0() para um fila "reta"
+template<class T>
+std::string Deque<T> :: Debug() const {
+  std::string output = std::string();
+   
+  Node<T>* x = first;
+
+  output = output + "Nó  Prof  Jump-depth     LA(Jump)\n";
+
+  while(x != last) {
+    output = output + x->val + "    " + std::to_string(x->depth) + "    " + std::to_string(x->jump->depth) + "          " +  LA(x, x->depth - x->jump->depth)->val + "\n";
+    x = x->parent;
+  }
+
+  output = output + x->val + "    " + std::to_string(x->depth) + "    " + std::to_string(x->jump->depth) + "          " +  LA(x, x->depth - x->jump->depth)->val + "\n";
+
+  return output;
+
+}
+
+template<class T>
+unsigned int Deque<T> :: Size() const {
+  Node<T>* mid = LCA(first,last);
+  unsigned int l1,l2;
+  l1 = first->depth - mid->depth + 1; // Número de nós entre first e mid, incluindo first e mid
+  l2 = last->depth - mid->depth; // Número de nós entre last e mid, incluindo last e excluindo mid 
+                                     
+  //std::cout << "Dentro de Size() : \n";
+  //std::cout << "l1 " << l1 << " l2 " << l2 << std::endl;
+  return l1 + l2;
+}
+
+// Usa K() para imprimir a fila
+template<class T>
+void Deque<T> :: Print_K() const {
+  std::cout << Size() << ", ";
+  for(int i = 1 ; i <= Size() ; i++){
+    std::cout << K(i) << " ";
+  }
+  std::cout << "\n";
+}
+
+
+// Testes para LA() 
+void Teste0() {
+  fila f1 = fila();
+  //std::cout << (int) 'a' << std::endl;
+  for(int i = (int) 'a'; i < (int) 'a' + 26; i++) f1 = f1.PushFront(i);
+  //std::cout << f1.Front() << std::endl; // z
+  //std::cout << f1.Back() << std::endl; // a
+
+  //std::cout << f1.Debug() << std::endl;
+  f1.Print_cout();
+}
+
+// Testes das funcionalidades básicas. O "grosso" está aqui
+void Teste1() {
+  fila f1 = fila();
+  fila f2 = f1.PushFront('a');
+  std::cout << f2.Print() << std::endl; // a
+  fila f3 = f2.PushFront('b');
+  std::cout << f3.Print() << std::endl; // b a
+  fila f4 = f3.PushFront('c');
+  std::cout << f4.Print() << std::endl; // c b a
+  fila f5 = f4.PushFront('d'); 
+  std::cout << f5.Print() << std::endl; // d c b a
+
+  fila f6 = f3.PushBack('e'); 
+  std::cout << f6.Print() << std::endl; // b a e
+  fila f7 = f6.PushBack('s');
+  std::cout << f7.Print() << std::endl; // b a e s
+  fila f8 = f4.PushBack('x');
+  std::cout << f8.Print() << std::endl; // c b a x
+  
+  fila f9 = f8.PopBack();
+  std::cout << f9.Print() << std::endl; // c b a 
+  fila f10 = f8.PopFront();
+  std::cout << f10.Print() << std::endl; //b a x 
+                                         
+  // Testa K-th()
+  
+  std::cout << "************** Testando K-th() *************\n";
+
+  f8.Print_K(); // 4, c b a x
+  f9.Print_K(); // 3, c b a
+  f5.Print_K(); // 4, d c b a
+
+}
+
+int main (int argc, char *argv[]) {
+  //Teste0();
+  Teste1();
+  //Teste2();
+  return 0;
 }

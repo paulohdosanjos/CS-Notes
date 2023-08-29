@@ -30,15 +30,19 @@ template<class T> class Deque {
     Node<T>* first;
     Node<T>* last;
 
-    Node<T>* LA(Node<T>* u, unsigned int k);
+    Node<T>* LA(Node<T>* const u, unsigned int const k) const;
 
-    Node<T>* LCA(Node<T>* u, Node<T>* v);
+    Node<T>* LCA(Node<T>* const u, Node<T>* const v) const;
 
     Deque<T> Swap();
 
     Deque(Node<T>* new_first, Node<T>* new_last);
 
-    void BuildJumpPointer(Node<T>* u, Node<T>* u_parent);
+    void BuildJumpPointer(Node<T>* u, Node<T>* const u_parent);
+
+    void  BuildFirstPointer(Node<T>* new_first);
+    
+    unsigned int Size() const;
 
   public:
 
@@ -61,6 +65,12 @@ template<class T> class Deque {
     T K(unsigned int k) const; 
 
     std::string Print() const;
+    
+    void Print_cout() const;
+
+    void Print_K() const;
+
+    std::string Debug() const;
 
 
 };
