@@ -1,5 +1,7 @@
 #include "deque.h"
 #include <string>
+#include <vector>
+#include <sstream>
 
 typedef Deque<char> fila;
 
@@ -215,7 +217,7 @@ std::string Deque<T> :: Print() const {
   // Imprimo de first à mid, incluindo mid
   unsigned int n1 = first->depth - mid->depth + 1; // Número de nós a serem impressos nesse primeiro segmento
   for(int i = 0; i < n1; i++) {
-    output = output + x->val + " ";
+    output = output + std::to_string(x->val) + " ";
     x = x->parent;
   } 
   // Imprimo de last a mid, excluindo mid, na ordem reversa
@@ -228,13 +230,14 @@ std::string Deque<T> :: Print() const {
     x = x->parent;
   } 
   for(int i = 0; i < n2; i++)
-    output = output + list[i]->val + " ";
+    output = output + std::to_string(list[i]->val) + " ";
 
   //std::cout << "Tudo certo na função Print()\n";
 
   return output;
   
 }
+
 
 template<class T>
 void Deque<T> :: Print_cout() const {
@@ -389,10 +392,53 @@ void Teste3() {
   std::cout << f2.Print() << std::endl;
 }
 
+// Entrada de teste da tarefa
+void Teste4() {
+  typedef Deque<int> fila;
+  std::vector<fila> v = std::vector<fila>(); 
+  v.push_back(fila());
+  
+  for(std::string line; std::getline(std::cin, line);) {
+    int opt, t, x;
+    std::istringstream iss = std::istringstream(line);
+    iss >> opt >> t >> x;
+    //std::cout << a << " " << b << " " << c << "\n";
+    switch (opt) {
+      case 1:
+        v.push_back(v[t].PushFront(x));
+        break;
+      case 2:
+        v.push_back(v[t].PushBack(x));
+        break;
+      case 3:
+        v.push_back(v[t].PopFront());
+        break;
+      case 4:
+        v.push_back(v[t].PopBack());
+        break;
+      case 5:
+        std::cout << v[t].Front() << std::endl;
+        break;
+      case 6:
+        std::cout << v[t].Back() << std::endl;
+        break;
+      case 7:
+        std::cout << v[t].K(x) << std::endl;
+        break;
+      case 8:
+        std::cout << v[t].Print() << std::endl;
+        break;
+    }
+
+  }
+
+}
+
 int main (int argc, char *argv[]) {
   //Teste0();
-  Teste1();
+  //Teste1();
   //Teste2();
   //Teste3();
+  Teste4();
   return 0;
 }
