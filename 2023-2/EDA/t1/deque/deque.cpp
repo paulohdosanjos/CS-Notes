@@ -92,6 +92,7 @@ Node<T>* Deque<T> :: LA(Node<T>* const u, unsigned int const k) const {
       x = x->parent;
   }
 
+
   return x; 
 }
 
@@ -108,14 +109,24 @@ Node<T>* Deque<T> :: LCA(Node<T>* const  _u, Node<T>* const _v) const {
     u = tmp;
   }
 
+  //std::cout << "ponto 1\n";
+
   // Subo u para a profundidade de v
   u = LA(u, u->depth - v->depth);
   //std::cout << "novo u : " << u->val << "\n";
 
+  //std::cout << "ponto 2\n";
   // Subo os dois simultaneamente até encontrar o LCA. Ele será o primeiro nó tal que o pai do apontador u coincide com o pai do apontador v
 
-  if(u == v) return u; // Já achei, engloba o caso em que v é o LCA 
+  //std::cout << "ponto 3\n";
+  //std::cout << u->val << " " << v->val << "\n";
+  //std::cout << (u == v ? "ok" : "No") << std::endl;
+  if(u == v) {
+    //std::cout << "retornando u: OK\n";
+    return u; // Já achei, engloba o caso em que v é o LCA 
+  }
   
+  //std::cout << "ponto 4\n";
   while(u->parent != v->parent) {
     if(u->jump != v->jump) {
       u = u->jump;
@@ -128,7 +139,6 @@ Node<T>* Deque<T> :: LCA(Node<T>* const  _u, Node<T>* const _v) const {
   }
   //std::cout << "Dentro de LCA(): " << "\n";
 
-  //std::cout << (u == nullptr ? "NULLPRT" : "OK");
   return u->parent;
 }
 
@@ -137,17 +147,40 @@ Deque<T> Deque<T> :: PopFront() {
   Node<T>* new_first;
   Node<T>* new_last;
 
+  //std::cout << "antes de LCA()\n";
+  //std::cout << LCA(first,last)->val << " " << first->val << " " << last->val << "\n";
+  //std::cout << (LCA(first,last) == first ? "OK1" : "OKNOTOK") << std::endl;
+  //std::cout << (LCA(first,last) == nullptr ? "NULLPTR" : "OK2") << std::endl;
   if(LCA(first,last) == first) {
-    unsigned int jumps_to_second = last->depth - first->depth - 1; // Jumps para ir de last até o antecessor de first
-    new_first = LA(last, jumps_to_second);
-    new_last = last;
+    //std::cout << "entrei no if\n";
+    //std::cout << LCA(first,last)->val << "\n"; 
+    //std::cout << (LCA(first,last) == nullptr ? "NULLPTR" : "OK3") << std::endl;
+    unsigned int jumps_to_second;
+    if(last->depth == first->depth) {// Só há um elemento na fila
+      //std::cout << "só um elemento" << std::endl;
+      jumps_to_second = 0;
+      new_first = nullptr;
+      new_last = nullptr;
+    }
+    else {
+      jumps_to_second = last->depth - first->depth - 1;
+      //unsigned int jumps_to_second = last->depth - first->depth - 1; // Jumps para ir de last até o antecessor de first, no caso em que first e last são distintos
+      //std::cout << "OK4" << std::endl;
+      new_first = LA(last, jumps_to_second);
+      //std::cout << "OK5" << std::endl;
+      new_last = last;
+    }
   }
 
+
   else {
+    //std::cout << "entrei no else\n";
     new_first = first->parent;
     new_last = last;
   }
 
+  //std::cout << "depois de LCA(1)\n";
+  //std::cout << "Tudo certo na PopFront()\n";
   return Deque(new_first,new_last);
 }
 
@@ -173,6 +206,7 @@ T Deque<T> :: K(unsigned int k) const {
 
 template<class T>
 std::string Deque<T> :: Print() const {
+  if(Size() == 0) return std::string();
   Node<T>* mid = LCA(first, last);
   //std::cout << "LCA calculado!" << std::endl;
   std::string output = std::string();
@@ -195,6 +229,8 @@ std::string Deque<T> :: Print() const {
   } 
   for(int i = 0; i < n2; i++)
     output = output + list[i]->val + " ";
+
+  //std::cout << "Tudo certo na função Print()\n";
 
   return output;
   
@@ -250,6 +286,7 @@ std::string Deque<T> :: Debug() const {
 
 template<class T>
 unsigned int Deque<T> :: Size() const {
+  if(first == nullptr) return 0;
   Node<T>* mid = LCA(first,last);
   unsigned int l1,l2;
   l1 = first->depth - mid->depth + 1; // Número de nós entre first e mid, incluindo first e mid
@@ -271,7 +308,7 @@ void Deque<T> :: Print_K() const {
 }
 
 
-// Testes para LA() 
+// Testes para LA(). OK
 void Teste0() {
   fila f1 = fila();
   //std::cout << (int) 'a' << std::endl;
@@ -283,7 +320,7 @@ void Teste0() {
   f1.Print_cout();
 }
 
-// Testes das funcionalidades básicas. O "grosso" está aqui
+// Testes das funcionalidades básicas. O "grosso" está aqui. OK
 void Teste1() {
   fila f1 = fila();
   fila f2 = f1.PushFront('a');
@@ -317,9 +354,45 @@ void Teste1() {
 
 }
 
+// Teste dos slides. OK
+void Teste2() {
+  fila f0 = fila();
+  fila f1 = f0.PushBack('c');
+  std::cout << f1.Print() << std::endl; // c 
+  fila f2 = f1.PushBack('d');
+  std::cout << f2.Print() << std::endl; // c d 
+  fila f3 = f2.PushFront('b');
+  std::cout << f3.Print() << std::endl; // b c d 
+  fila f4 = f3.PushFront('a');
+  std::cout << f4.Print() << std::endl; // a b c d
+  fila f5 = f3.PopBack();
+  std::cout << f5.Print() << std::endl; // b c 
+  fila f6 = f5.PopBack();
+  std::cout << f6.Print() << std::endl; // b 
+  fila f7 = f6.PushFront('i');
+  std::cout << f7.Print() << std::endl; // i b 
+  fila f8 = f6.PopFront();
+  std::cout << f8.Print() << std::endl; //  
+  fila f9 = f8.PushFront('f');
+  std::cout << f9.Print() << std::endl; // f 
+
+}
+
+
+// Depurar função PopFront(), que não deleta quando só tem um elemento. OK
+void Teste3() {
+  fila f0 = fila();
+  fila f1 = f0.PushFront('a');
+  std::cout << f1.Print() << std::endl;
+
+  fila f2 = f1.PopFront();
+  std::cout << f2.Print() << std::endl;
+}
+
 int main (int argc, char *argv[]) {
   //Teste0();
   Teste1();
   //Teste2();
+  //Teste3();
   return 0;
 }
