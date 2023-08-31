@@ -11,8 +11,7 @@ class Node
     Node* parent;
     Node* jump;
     
-    // Os ponteiros parent e jump são inicializados pela classe deque
-    Node(const int val, unsigned int depth_new_node) : val(val), depth(depth_new_node) {}
+    Node(const int val, unsigned int depth_new_node) : val(val), depth(depth_new_node) {} // Os ponteiros parent e jump são inicializados pela classe deque
     
     // Construtor para a raiz
     Node() : depth(0) {
@@ -340,7 +339,7 @@ void Teste1()
 
 }
 
-// Teste dos slides. OK
+// Simulação dos slides. OK
 void Teste2() 
 {
   typedef Deque fila;
@@ -365,27 +364,14 @@ void Teste2()
   std::cout << f9.Print() << std::endl; // 6 
 }
 
-
-// Para depurar função PopFront(), que não deleta quando só tem um elemento. OK
-void Teste3() {
-  typedef Deque fila;
-  fila f0 = fila();
-  fila f1 = f0.PushFront(1);
-  std::cout << f1.Print() << std::endl;
-
-  fila f2 = f1.PopFront();
-  std::cout << f2.Print() << std::endl;
-}
-
 // Cliente para teste da tarefa
-void Teste4() {
+void Teste3() {
   typedef Deque fila;
   std::vector<fila> v = std::vector<fila>(); 
 
-  v.push_back(fila()); // Cria primeira fila vazia
+  v.push_back(fila()); 
   
   for(std::string line; std::getline(std::cin, line) ; ) {
-    // Extrai linha da entrada padrão
     int opt, t, x;
     std::istringstream iss = std::istringstream(line);
     iss >> opt >> t >> x;
@@ -424,7 +410,6 @@ void Teste4() {
 int main (int argc, char *argv[]) {
   //Teste1();
   //Teste2();
-  //Teste3();
-  Teste4();
+  Teste3();
   return 0;
 }
