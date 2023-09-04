@@ -47,7 +47,7 @@ class Abb {
       _Delete(root, x);
     }
 
-    // Delete nó de chave x da árvore enraizada em u. Devolve a árvore resultante
+    // Delete nó de chave x da árvore enraizada em u. Devolve a árvore resultante. É chamado somente quando é certificado que a chave x pertence a u
     Node* _Delete(Node* u, int const x)
     {
       if(x > u->key){
@@ -56,6 +56,7 @@ class Abb {
       }
       else if(x < u->key){
         u->left =_Delete(u->left, x); 
+        u->num_left--;
         return u; 
       }
       else
@@ -73,7 +74,7 @@ class Abb {
           int tmp = u->key;
           u->key = sucessor->key;
           sucessor->key = tmp;
-          _Delete(sucessor, x);
+          u->right = _Delete(u->right, x);
           return u;
         }
       }
@@ -335,7 +336,7 @@ class Abb {
 };
 
 
-// Teste inicial para insert. Parece OK.
+// Teste inicial para insert. OK.
 void Teste1() 
 {
   int list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
@@ -355,12 +356,14 @@ void Teste2()
   for(int i = 0; i < n ; i++) a.Insert(list[i]);
   std::cout << "Antes de deletar" << std::endl;
   std::cout << std::endl;
+  a.PrintPre();
   a.Print();
   std::cout << std::endl;
-  int x = 13;
+  int x = 8;
   std::cout << "Deleta " << x << std::endl;
   std::cout << std::endl;
   a.Delete(x);
+  a.PrintPre();
   a.Print();
 }
 
