@@ -83,7 +83,7 @@ class Abb {
       for(int i = 0; i < num_rows ; i++){
         for(int j = 0; j < num_cols ; j++){
           int index = i * num_cols + j;
-          std::cout << matrix[index] << " ";
+          std::cout << (matrix[index] == EMPTY_CHAR ? " " : std::to_string(matrix[index])) << " ";
         }
         std::cout << "\n";
       }
@@ -109,27 +109,27 @@ class Abb {
       for(int i = 0; i < num_rows; i++){
         for(int j = 0; j < num_cols; j++){
           int index = i * num_cols + j;
-          if(i % 2 == 1){ // Linha ímpares, tratar linhas
-            if(matrix[index] == EMPTY_CHAR)
+          if(i % 3 == 1 || i % 3 == 2){ // Linha de setas
+            if(matrix[index] == EMPTY_CHAR){
               std::cout << empty_cell;// << "|";
-            else{
-              int num_digits = 1; 
-              int delta = (cell_width - num_digits) / 2;
-              std::cout << std::string(delta, ' ');
-              std::cout << arrows[matrix[index]];
-              std::cout << std::string(cell_width - num_digits - delta, ' ');// << "|";
+              continue;
             }
+            int num_digits = 1; 
+            int delta = (cell_width - num_digits) / 2;
+            std::cout << std::string(delta, ' ');
+            std::cout << arrows[matrix[index]];
+            std::cout << std::string(cell_width - num_digits - delta, ' ');// << "|";
           }
-          else{
-            if(matrix[index] == EMPTY_CHAR)
+          else { // Linha de chaves
+            if(matrix[index] == EMPTY_CHAR){
               std::cout << empty_cell; // << "|";
-            else{
-              int num_digits = number_of_digits(matrix[index]);
-              int delta = (cell_width - num_digits) / 2;
-              std::cout << std::string(delta, ' ');
-              std::cout << matrix[index];
-              std::cout << std::string(cell_width - num_digits - delta, ' ');// << "|";
+              continue;
             }
+            int num_digits = number_of_digits(matrix[index]);
+            int delta = (cell_width - num_digits) / 2;
+            std::cout << std::string(delta, ' ');
+            std::cout << matrix[index];
+            std::cout << std::string(cell_width - num_digits - delta, ' ');// << "|";
           }
         }
         std::cout << std::endl;
@@ -156,7 +156,7 @@ class Abb {
     // Imprime uma representação gráfica da árvore. Consome espaço O(n²) e tempo O(n)
     void Print()
     {
-      int num_rows = Height() * 2 - 1; 
+      int num_rows = Height() * 3 - 2; 
       int num_cols = Size();
       int output [num_rows*num_cols];
       for(int i = 0; i < num_rows*num_cols; i++) output[i] = EMPTY_CHAR;
@@ -204,7 +204,7 @@ class Abb {
     {
       if(u == nullptr) return;
 
-      int i = i_parent + 2, j;
+      int i = i_parent + 3, j;
       if(is_left_child) {
         j = j_parent - num_left_parent + u->num_left; 
       }
@@ -219,14 +219,16 @@ class Abb {
       int i_line = i_parent + 1;
       int index_vertical_bar_below_parent = i_line * num_cols + j_parent;
       if(j < j_parent - 1 || j > j_parent + 1){
-        output[index_vertical_bar_below_parent] = 2; 
+        output[index_vertical_bar_below_parent] = 2; // '|'
       }
+
       if(is_left_child){ // Filho esquerdo
         int index;
         for(int x = j_parent - 1; x >= j + 1; x--){
           index = i_line * num_cols + x;
           output[index] = 1; // '-'
         }
+        i_line++;
         index = i_line * num_cols + j;
         output[index] = 0; // '/'
       }
@@ -237,6 +239,7 @@ class Abb {
           index = i_line * num_cols + x;
           output[index] = 1; // '-'
         }
+        i_line++;
         index = i_line * num_cols + j;
         output[index] = 3; // '\'
       }
@@ -324,7 +327,7 @@ class Abb {
 void Teste1() 
 {
   //int list[] = {10, 3, 23, 5, 11, 2, 14, 4, 6, 20};
-  int list[] = {1011111, 30, 2, 33, 7, 10, 11, 103, 102, 10109};
+  int list[] = {101, 30, 2, 33, 7, 10, 11, 103, 102, 109};
   int n = sizeof(list) / sizeof(list[0]);
   Abb a = Abb();
   for(int i = 0; i < n ; i++) a.Insert(list[i]);
