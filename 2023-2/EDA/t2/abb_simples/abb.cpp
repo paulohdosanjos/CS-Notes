@@ -11,7 +11,7 @@
 // Não será usado apontador para o pai. Mantenho a quantidade de nós da sub-árvore esquerda para implementar uma função de Print() bonitinha da árvore.
 class Node {
   public:
-    const int key;
+    int key;
     int num_left; // Número de nós na sub-árvore esquerda
     Node* left;
     Node* right;
@@ -38,6 +38,45 @@ class Abb {
       }
 
       _Insert(root, x);
+    }
+
+    // Remove nó e devolve a raiz árvore resultante
+    void Delete(const int x)
+    {
+      if(!SearchKey(x)) return; // Não há chave x 
+      _Delete(root, x);
+    }
+
+    // Delete nó de chave x da árvore enraizada em u. Devolve a árvore resultante
+    Node* _Delete(Node* u, int const x)
+    {
+      if(x > u->key){
+        u->right = _Delete(u->right, x);
+        return u;
+      }
+      else if(x < u->key){
+        u->left =_Delete(u->left, x); 
+        return u; 
+      }
+      else
+      { // x == u->key
+        if(u->left == nullptr){ // Sem filho esquerdo. Talvez tenha filho direito
+          return u->right;
+        }
+        else if(u->right == nullptr) // Sem filho direito. Com filho esquerdo
+        {
+          return u->left;
+        }
+        else
+        { // Tem os dois filhos
+          Node* sucessor = _Min(u->right);
+          int tmp = u->key;
+          u->key = sucessor->key;
+          sucessor->key = tmp;
+          _Delete(sucessor, x);
+          return u;
+        }
+      }
     }
 
     // Imprime a árvore em pós-ordem. Para depuração
@@ -159,13 +198,13 @@ class Abb {
     // Retorna a menor chave da árvore
     int Min() 
     {
-      return _Min(root);
+      return _Min(root)->key;
     }
 
-    int _Min(Node* u){
-      if(u == nullptr) return -INFTY; // Entra somente quando a árvore está vazia
+    Node* _Min(Node* u){
+      if(u == nullptr) return nullptr; // Entra somente quando a árvore está vazia
       if(u->left != nullptr) return _Min(u->left);
-      else return u->key;
+      else return u;
     }
     void _Print(int num_rows, int num_cols, int output[], Node* u, bool is_left_child, int i_parent, int j_parent, int num_left_parent)
     {
@@ -232,7 +271,6 @@ class Abb {
       assert(x != r->key);
       
       if(x > r->key) {
-        //std::cout << "Caso 1" << std::endl;
         if(r->right == nullptr){
           Node* u = new Node(x, 0, nullptr, nullptr);
           r->right = u;
@@ -271,6 +309,19 @@ class Abb {
       else return _SearchKey(r->right, x);
     }
 
+    Node* SearchNode(const int x) const
+    {
+      return _SearchNode(root, x);
+    }
+
+    Node* _SearchNode(Node* const n, const int x) const
+    {
+      if(n == nullptr) return nullptr;
+      if(x == n->key) return n;
+      else if(x < n->key) return _SearchNode(n->left, x);
+      else return _SearchNode(n->right, x);
+    }
+
     int Size()
     {
       return _Size(root);
@@ -287,8 +338,7 @@ class Abb {
 // Teste inicial para insert. Parece OK.
 void Teste1() 
 {
-  //int list[] = {10, 3, 23, 5, 11, 2, 14, 4, 6, 20};
-  int list[] = {-10111, 30, 2, 33, 7, 10, 11, 103, 102, 1109};
+  int list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
   int n = sizeof(list) / sizeof(list[0]);
   Abb a = Abb();
   for(int i = 0; i < n ; i++) a.Insert(list[i]);
@@ -296,7 +346,26 @@ void Teste1()
   a.Print();
 }
 
+// Teste inicial para delete
+void Teste2()
+{
+  int list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(list) / sizeof(list[0]);
+  Abb a = Abb();
+  for(int i = 0; i < n ; i++) a.Insert(list[i]);
+  std::cout << "Antes de deletar" << std::endl;
+  std::cout << std::endl;
+  a.Print();
+  std::cout << std::endl;
+  int x = 13;
+  std::cout << "Deleta " << x << std::endl;
+  std::cout << std::endl;
+  a.Delete(x);
+  a.Print();
+}
+
 
 int main() {
-  Teste1();
+  //Teste1();
+  Teste2();
 }
