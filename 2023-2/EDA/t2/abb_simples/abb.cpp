@@ -98,8 +98,12 @@ class Abb {
       // arrow[4] = ' '
       char arrows[] = {'/', '-', '|', '\\', ' '};
 
-      int cell_width = number_of_digits(Max());
-      //std::cout << cell_width << std::endl;
+      int n1 = number_of_digits(Max());
+      int n2;
+      n2 = (Min() < 0 ? 1 + number_of_digits(std::abs(Min())) : 0);
+      std::cout << "n1 = " << n1 << " , n2 = " << n2 << std::endl;
+      int cell_width = std::max(n1,n2);
+      std::cout << cell_width << std::endl;
       std::string empty_cell (cell_width,' '); 
 
       for(int i = 0; i < num_rows; i++){
@@ -182,6 +186,19 @@ class Abb {
       if(u->right != nullptr) return _Max(u->right);
       else return u->key;
     }
+    
+    // Retorna a menor chave da árvore
+    int Min() 
+    {
+      return _Min(root);
+    }
+
+    int _Min(Node* u){
+      if(u == nullptr) return -INFTY; // Entra somente quando a árvore está vazia
+      if(u->left != nullptr) return _Min(u->left);
+      else return u->key;
+    }
+
 
     void _Print(int num_rows, int num_cols, int output[], Node* u, bool is_left_child, int i_parent, int j_parent, int num_left_parent)
     {
@@ -306,20 +323,12 @@ class Abb {
 // Teste inicial para insert. Parece OK.
 void Teste1() 
 {
+  //int list[] = {10, 3, 23, 5, 11, 2, 14, 4, 6, 20};
+  int list[] = {1011111, 30, 2, 33, 7, 10, 11, 103, 102, 10109};
+  int n = sizeof(list) / sizeof(list[0]);
   Abb a = Abb();
-  a.Insert(10);
-  a.Insert(3);
-  a.Insert(23);
-  a.Insert(5);
-  a.Insert(11);
-  a.Insert(2);
-  a.Insert(14);
-  a.Insert(4);
-  a.Insert(6);
-  a.Insert(20);
-  //std::cout << a.Max() << std::endl;
-  //std::cout << "Height = " << a.Height() << std::endl;
-  //a.PrintPre();
+  for(int i = 0; i < n ; i++) a.Insert(list[i]);
+  //std::cout << a.Min() << std::endl;
   a.Print();
 }
 
