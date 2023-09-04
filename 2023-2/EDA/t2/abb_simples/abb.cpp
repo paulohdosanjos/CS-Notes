@@ -8,7 +8,7 @@
 #define INFTY 1000000
 #define EMPTY_CHAR -12345
 
-// Não será usado apontador para o pai. Mantenho a quantidade de nós da sub-árvore esquerda para implementar uma função de Print() da árvore.
+// Não será usado apontador para o pai. Mantenho a quantidade de nós da sub-árvore esquerda para implementar uma função de Print() bonitinha da árvore.
 class Node {
   public:
     const int key;
@@ -28,24 +28,16 @@ class Abb {
     {
 
       if(root == nullptr) { // Árvore vazia
-        //std::cout << "árvore vazia, só atribui raiz para o novo nó criado" << std::endl;
         Node* u = new Node(x, 0, nullptr, nullptr);
-        //std::cout << "novo nó alocado com valor " << u->key << std::endl;
         root = u;
         return;
       }
 
-      //std::cout << "verificando se já existe chave " << x << " na árvore" << std::endl;
-
       if(SearchKey(x)) {
-        //std::cout << "chave já existe, não faço nada" << std::endl;
         return;
       }
 
-      //std::cout << "chave não existe, inserindo novo nó" << std::endl;
-
       _Insert(root, x);
-
     }
 
     // Imprime a árvore em pós-ordem. Para depuração
@@ -65,29 +57,12 @@ class Abb {
 
     }
 
-    // Devolve string com representação visual da árvore.
-    //std::string Print()
-    //{
-    //  std::string output = std::string();
-
-    //}
-    
-
-    // Retorna o número de digitos de n
+   // Retorna o número de digitos de n. Converter para uma macro
     int number_of_digits(int n)
     {
       return (int) (std::log10(n) + 1);
     }
 
-    void raw_matrix(int num_rows, int num_cols, int matrix[]){
-      for(int i = 0; i < num_rows ; i++){
-        for(int j = 0; j < num_cols ; j++){
-          int index = i * num_cols + j;
-          std::cout << (matrix[index] == EMPTY_CHAR ? " " : std::to_string(matrix[index])) << " ";
-        }
-        std::cout << "\n";
-      }
-    }
     
     void Print_matrix(int num_rows, int num_cols, int matrix[]){
       // Original arrow mapping
@@ -96,14 +71,12 @@ class Abb {
       // arrow[2] = '|'
       // arrow[3] = '\\'
       // arrow[4] = ' '
-      char arrows[] = {'/', '-', '|', '\\', ' '};
+      char arrows[] = {'/', '-', '*', '\\', ' '};
 
       int n1 = number_of_digits(Max());
       int n2;
       n2 = (Min() < 0 ? 1 + number_of_digits(std::abs(Min())) : 0);
-      std::cout << "n1 = " << n1 << " , n2 = " << n2 << std::endl;
       int cell_width = std::max(n1,n2);
-      std::cout << cell_width << std::endl;
       std::string empty_cell (cell_width,' '); 
 
       for(int i = 0; i < num_rows; i++){
@@ -163,16 +136,12 @@ class Abb {
       int i_root = 0, j_root = root->num_left;
       int index = i_root * num_cols + j_root;
 
-      //std::cout << "i_root = " << i_root << " j_root = " << j_root << std::endl;
       output[index] = root->key;
-      //Print_matrix(num_rows, num_cols, output);
 
       _Print(num_rows, num_cols, output, root->left, true, i_root, j_root, root->num_left);
       _Print(num_rows, num_cols, output, root->right, false, i_root, j_root, root->num_left);
 
-      //raw_matrix(num_rows, num_cols, output);
       Print_matrix(num_rows, num_cols, output);
-     
     }
 
     // Retorna a maior chave da árvore
@@ -198,8 +167,6 @@ class Abb {
       if(u->left != nullptr) return _Min(u->left);
       else return u->key;
     }
-
-
     void _Print(int num_rows, int num_cols, int output[], Node* u, bool is_left_child, int i_parent, int j_parent, int num_left_parent)
     {
       if(u == nullptr) return;
@@ -213,7 +180,6 @@ class Abb {
       }
 
       // Imprimindo setas
-      // Para linhas ímpares,
       // '/' = 0 , '-' = 1 , '|' = 3 , '\' = 4
 
       int i_line = i_parent + 1;
@@ -244,6 +210,7 @@ class Abb {
         output[index] = 3; // '\'
       }
 
+      // Imprimindo actual key
       int index = i * num_cols + j;
       //std::cout << "i = " << i << " j = " << j << std::endl;
       output[index] = u->key;
@@ -264,8 +231,6 @@ class Abb {
       assert(r != nullptr);
       assert(x != r->key);
       
-      //std::cout << "SearchParent(" << r->key << ", " << (r_parent == nullptr ? 0 : r_parent->key) << ", " << x << ")" << std::endl;
-
       if(x > r->key) {
         //std::cout << "Caso 1" << std::endl;
         if(r->right == nullptr){
@@ -275,21 +240,17 @@ class Abb {
         }
         else {
           return _Insert(r->right, x);
-          //std::cout << "achei caso 1" << std::endl;
         }
       }
       else {
         r->num_left++;
-        //std::cout << "Caso 2" << std::endl;
         if(r->left == nullptr){
-          //std::cout << "chave x menor, indo pra esquerda" << std::endl;
           Node* u = new Node(x, 0, nullptr, nullptr);
           r->left = u;
           return u;
         }
         else{
           return _Insert(r->left, x);
-          //std::cout << "achei caso 2" << std::endl;
         }
       }
     }
@@ -327,7 +288,7 @@ class Abb {
 void Teste1() 
 {
   //int list[] = {10, 3, 23, 5, 11, 2, 14, 4, 6, 20};
-  int list[] = {-101, 30, 2, 33, 7, 10, 11, 103, 102, 109};
+  int list[] = {-10111, 30, 2, 33, 7, 10, 11, 103, 102, 1109};
   int n = sizeof(list) / sizeof(list[0]);
   Abb a = Abb();
   for(int i = 0; i < n ; i++) a.Insert(list[i]);
