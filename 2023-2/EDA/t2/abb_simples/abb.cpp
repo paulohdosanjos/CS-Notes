@@ -125,7 +125,7 @@ class Abb {
               std::cout << empty_cell; // << "|";
               continue;
             }
-            int num_digits = number_of_digits(matrix[index]);
+            int num_digits = (matrix[index] < 0 ? 1 + number_of_digits(std::abs(matrix[index])) : number_of_digits(matrix[index]));
             int delta = (cell_width - num_digits) / 2;
             std::cout << std::string(delta, ' ');
             std::cout << matrix[index];
@@ -327,7 +327,7 @@ class Abb {
 void Teste1() 
 {
   //int list[] = {10, 3, 23, 5, 11, 2, 14, 4, 6, 20};
-  int list[] = {101, 30, 2, 33, 7, 10, 11, 103, 102, 109};
+  int list[] = {-101, 30, 2, 33, 7, 10, 11, 103, 102, 109};
   int n = sizeof(list) / sizeof(list[0]);
   Abb a = Abb();
   for(int i = 0; i < n ; i++) a.Insert(list[i]);
