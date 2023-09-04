@@ -3,8 +3,10 @@
 #include <iostream>
 #include <string>
 #include <cassert>
+#include <cmath>
 
 #define INFTY 1000000
+#define EMPTY_CHAR -12345
 
 // Não será usado apontador para o pai. Mantenho a quantidade de nós da sub-árvore esquerda para implementar uma função de Print() da árvore.
 class Node {
@@ -70,13 +72,63 @@ class Abb {
 
     //}
     
+
+    // Retorna o número de digitos de n
+    int number_of_digits(int n)
+    {
+      return (int) (std::log10(n) + 1);
+    }
+
+    void raw_matrix(int num_rows, int num_cols, int matrix[]){
+      for(int i = 0; i < num_rows ; i++){
+        for(int j = 0; j < num_cols ; j++){
+          int index = i * num_cols + j;
+          std::cout << matrix[index] << " ";
+        }
+        std::cout << "\n";
+      }
+    }
+    
     void Print_matrix(int num_rows, int num_cols, int matrix[]){
+      // Original arrow mapping
+      // arrow[0] = '/'
+      // arrow[1] = '-'
+      // arrow[2] = '|'
+      // arrow[3] = '\\'
+      // arrow[4] = ' '
+      char arrows[] = {'/', '-', '|', '\\', ' '};
+
+      int cell_width = number_of_digits(Max());
+      //std::cout << cell_width << std::endl;
+      std::string empty_cell (cell_width,' '); 
+
       for(int i = 0; i < num_rows; i++){
         for(int j = 0; j < num_cols; j++){
           int index = i * num_cols + j;
-          std::cout << (matrix[index] == 0 ? " " : std::to_string(matrix[index])) << "   ";
+          if(i % 2 == 1){ // Linha ímpares, tratar linhas
+            if(matrix[index] == EMPTY_CHAR)
+              std::cout << empty_cell;// << "|";
+            else{
+              int num_digits = 1; 
+              int delta = (cell_width - num_digits) / 2;
+              std::cout << std::string(delta, ' ');
+              std::cout << arrows[matrix[index]];
+              std::cout << std::string(cell_width - num_digits - delta, ' ');// << "|";
+            }
+          }
+          else{
+            if(matrix[index] == EMPTY_CHAR)
+              std::cout << empty_cell; // << "|";
+            else{
+              int num_digits = number_of_digits(matrix[index]);
+              int delta = (cell_width - num_digits) / 2;
+              std::cout << std::string(delta, ' ');
+              std::cout << matrix[index];
+              std::cout << std::string(cell_width - num_digits - delta, ' ');// << "|";
+            }
+          }
         }
-        std::cout << std::endl << std::endl;
+        std::cout << std::endl;
       } 
     }
 
@@ -100,10 +152,10 @@ class Abb {
     // Imprime uma representação gráfica da árvore. Consome espaço O(n²) e tempo O(n)
     void Print()
     {
-      int num_rows = Height(); 
+      int num_rows = Height() * 2 - 1; 
       int num_cols = Size();
       int output [num_rows*num_cols];
-      for(int i = 0; i < num_rows*num_cols; i++) output[i] = 0;
+      for(int i = 0; i < num_rows*num_cols; i++) output[i] = EMPTY_CHAR;
       int i_root = 0, j_root = root->num_left;
       int index = i_root * num_cols + j_root;
 
@@ -114,20 +166,62 @@ class Abb {
       _Print(num_rows, num_cols, output, root->left, true, i_root, j_root, root->num_left);
       _Print(num_rows, num_cols, output, root->right, false, i_root, j_root, root->num_left);
 
+      //raw_matrix(num_rows, num_cols, output);
       Print_matrix(num_rows, num_cols, output);
      
+    }
+
+    // Retorna a maior chave da árvore
+    int Max() 
+    {
+      return _Max(root);
+    }
+
+    int _Max(Node* u){
+      if(u == nullptr) return -INFTY;
+      if(u->right != nullptr) return _Max(u->right);
+      else return u->key;
     }
 
     void _Print(int num_rows, int num_cols, int output[], Node* u, bool is_left_child, int i_parent, int j_parent, int num_left_parent)
     {
       if(u == nullptr) return;
 
-      int i = i_parent + 1, j;
+      int i = i_parent + 2, j;
       if(is_left_child) {
         j = j_parent - num_left_parent + u->num_left; 
       }
       else {
         j = j_parent + u->num_left + 1;
+      }
+
+      // Imprimindo setas
+      // Para linhas ímpares,
+      // '/' = 0 , '-' = 1 , '|' = 3 , '\' = 4
+
+      int i_line = i_parent + 1;
+      int index_vertical_bar_below_parent = i_line * num_cols + j_parent;
+      if(j < j_parent - 1 || j > j_parent + 1){
+        output[index_vertical_bar_below_parent] = 2; 
+      }
+      if(is_left_child){ // Filho esquerdo
+        int index;
+        for(int x = j_parent - 1; x >= j + 1; x--){
+          index = i_line * num_cols + x;
+          output[index] = 1; // '-'
+        }
+        index = i_line * num_cols + j;
+        output[index] = 0; // '/'
+      }
+
+      else{ // Filho direito
+        int index;
+        for(int x = j_parent + 1; x <= j - 1; x++){
+          index = i_line * num_cols + x;
+          output[index] = 1; // '-'
+        }
+        index = i_line * num_cols + j;
+        output[index] = 3; // '\'
       }
 
       int index = i * num_cols + j;
@@ -222,12 +316,10 @@ void Teste1()
   a.Insert(14);
   a.Insert(4);
   a.Insert(6);
-  a.Insert(21);
-  a.Insert(12);
-  a.Insert(15);
-  a.Insert(1);
-  std::cout << "Height = " << a.Height() << std::endl;
-  a.PrintPre();
+  a.Insert(20);
+  //std::cout << a.Max() << std::endl;
+  //std::cout << "Height = " << a.Height() << std::endl;
+  //a.PrintPre();
   a.Print();
 }
 
