@@ -350,21 +350,28 @@ void Teste1()
 // Teste inicial para delete
 void Teste2()
 {
-  int list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
-  int n = sizeof(list) / sizeof(list[0]);
+  //Inserindo elementos
+
+  int insert_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insert_list) / sizeof(insert_list[0]);
   Abb a = Abb();
-  for(int i = 0; i < n ; i++) a.Insert(list[i]);
+  for(int i = 0; i < n ; i++) a.Insert(insert_list[i]);
   std::cout << "Antes de deletar" << std::endl;
   std::cout << std::endl;
   a.PrintPre();
   a.Print();
   std::cout << std::endl;
-  int x = 8;
-  std::cout << "Deleta " << x << std::endl;
-  std::cout << std::endl;
-  a.Delete(x);
-  a.PrintPre();
-  a.Print();
+
+  // Deletando elementos
+
+  int delete_list[] = {6, 14, 3};
+  n = sizeof(delete_list) / sizeof(delete_list[0]);
+  for(int i = 0; i < n; i++){
+    std::cout << "Deleta " << delete_list[i] << std::endl;
+    a.Delete(delete_list[i]);
+    a.PrintPre();
+    a.Print();
+  }
 }
 
 
