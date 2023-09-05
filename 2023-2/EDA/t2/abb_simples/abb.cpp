@@ -43,8 +43,8 @@ class Abb {
     // Remove nó e devolve a raiz árvore resultante
     void Delete(const int x)
     {
-      if(!SearchKey(x)) return; // Não há chave x 
-      _Delete(root, x);
+      if(!SearchKey(x)) return; // Não há chave x na árvore
+      root = _Delete(root, x);
     }
 
     // Delete nó de chave x da árvore enraizada em u. Devolve a árvore resultante. É chamado somente quando é certificado que a chave x pertence a u
@@ -347,12 +347,12 @@ void Teste1()
   a.Print();
 }
 
-// Teste inicial para delete
+// Teste inicial para delete. Raiz parece não estar sendo deletada em todos os casos. Um exemplo está reproduzido no Teste3()
 void Teste2()
 {
   //Inserindo elementos
 
-  int insert_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int insert_list[] = {10, 5, 15, 3, 8, 12, 18, 2, 4, 7, 9, 11, 14, 16, 20};
   int n = sizeof(insert_list) / sizeof(insert_list[0]);
   Abb a = Abb();
   for(int i = 0; i < n ; i++) a.Insert(insert_list[i]);
@@ -364,7 +364,7 @@ void Teste2()
 
   // Deletando elementos
 
-  int delete_list[] = {6, 14, 3};
+  int delete_list[] = {2, 4, 7, 9, 11, 14, 16,20,18, 12, 15, 10, 5, 3, 8};
   n = sizeof(delete_list) / sizeof(delete_list[0]);
   for(int i = 0; i < n; i++){
     std::cout << "Deleta " << delete_list[i] << std::endl;
@@ -374,8 +374,31 @@ void Teste2()
   }
 }
 
+// Resolvido problema de deletar a raiz
+void Teste3()
+{
+  //Inserindo elementos
+  int insert_list[] = {10, 5, 3, 8};
+  int n = sizeof(insert_list) / sizeof(insert_list[0]);
+  Abb a = Abb();
+  for(int i = 0; i < n ; i++) a.Insert(insert_list[i]);
+  std::cout << "Antes de deletar" << std::endl;
+  std::cout << std::endl;
+  a.PrintPre();
+  a.Print();
+  std::cout << std::endl;
+
+  // Deletendo a raiz
+
+  std::cout << "Deleta " << insert_list[0] << std::endl;
+  a.Delete(insert_list[0]);
+  a.PrintPre();
+  a.Print();
+
+}
 
 int main() {
   //Teste1();
   Teste2();
+  //Teste3();
 }
