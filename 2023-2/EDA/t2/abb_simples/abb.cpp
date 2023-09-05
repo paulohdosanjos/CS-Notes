@@ -169,6 +169,11 @@ class Abb {
     // Imprime uma representação gráfica da árvore. Consome espaço O(n²) e tempo O(n)
     void Print()
     {
+      if(Size() == 0)
+      {
+        std::cout << "\n";
+        return;
+      }
       int num_rows = Height() * 3 - 2; 
       int num_cols = Size();
       int output [num_rows*num_cols];
