@@ -1,4 +1,4 @@
-// Implementação de uma ABB simples para eu começar a ter um feeling da implementação da treap. 
+// Implementação de uma ABB simples com uma função Print() para eu começar a ter um feeling da implementação da treap. 
 
 #include <iostream>
 #include <string>
@@ -8,7 +8,7 @@
 #define INFTY 1000000
 #define EMPTY_CHAR -12345
 
-// Não será usado apontador para o pai. Mantenho a quantidade de nós da sub-árvore esquerda para implementar uma função de Print() bonitinha da árvore.
+// Nó não terá campo apontador para o pai. Mantenho a quantidade de nós da sub-árvore esquerda para implementar uma função de Print() bonitinha da árvore.
 class Node {
   public:
     int key;
@@ -26,17 +26,12 @@ class Abb {
     // Insere um nó com chave x na árvore. Caso já existe um nó com essa chave, nada acontece.
     void Insert(const int x) 
     {
-
       if(root == nullptr) { // Árvore vazia
         Node* u = new Node(x, 0, nullptr, nullptr);
         root = u;
         return;
       }
-
-      if(SearchKey(x)) {
-        return;
-      }
-
+      if(SearchKey(x)) return;
       _Insert(root, x);
     }
 
@@ -47,47 +42,51 @@ class Abb {
       root = _Delete(root, x);
     }
 
-    // Delete nó de chave x da árvore enraizada em u. Devolve a árvore resultante. É chamado somente quando é certificado que a chave x pertence a u
-    Node* _Delete(Node* u, int const x)
-    {
-      if(x > u->key){
-        u->right = _Delete(u->right, x);
-        return u;
-      }
-      else if(x < u->key){
-        u->left =_Delete(u->left, x); 
-        u->num_left--;
-        return u; 
-      }
-      else
-      { // x == u->key
-        if(u->left == nullptr){ // Sem filho esquerdo. Talvez tenha filho direito
-          return u->right;
-        }
-        else if(u->right == nullptr) // Sem filho direito. Com filho esquerdo
-        {
-          return u->left;
-        }
-        else
-        { // Tem os dois filhos
-          Node* sucessor = _Min(u->right);
-          int tmp = u->key;
-          u->key = sucessor->key;
-          sucessor->key = tmp;
-          u->right = _Delete(u->right, x);
-          return u;
-        }
-      }
-    }
-
-    // Imprime a árvore em pós-ordem. Para depuração
+    // Imprime a árvore em pré-ordem. Para depuração
     void PrintPre()
     {
       std::cout << "Size : " << Size() << std::endl;
       _PrintPre(root);
       std::cout << "\n";
     }
+       // Imprime uma representação gráfica da árvore. Consome espaço O(n²) e tempo O(n)
+    void Print()
+    {
+      if(Size() == 0)
+      {
+        std::cout << "\n";
+        return;
+      }
+      int num_rows = Height() * 3 - 2; 
+      int num_cols = Size();
+      int output [num_rows*num_cols];
+      for(int i = 0; i < num_rows*num_cols; i++) output[i] = EMPTY_CHAR;
+      int i_root = 0, j_root = root->num_left;
+      int index = i_root * num_cols + j_root;
 
+      output[index] = root->key;
+
+      _Print(num_rows, num_cols, output, root->left, true, i_root, j_root, root->num_left);
+      _Print(num_rows, num_cols, output, root->right, false, i_root, j_root, root->num_left);
+
+      Print_matrix(num_rows, num_cols, output);
+    }
+    
+    // Retorna a menor chave da árvore
+    int Min() 
+    {
+      return _Min(root)->key;
+    }
+
+    // Verifica se chave x está na árvore
+    bool Search(const int x)
+    {
+      return SearchKey(x);
+    }
+
+  private:
+    Node* root;
+ 
     void _PrintPre(const Node* const u)
     {
       if(u == nullptr) return;
@@ -149,46 +148,7 @@ class Abb {
       } 
     }
 
-    // Retorna altura da árvore
-    int Height()
-    {
-      return _Height(root, 0);
-    }
-
-    // Retorna a altura da árvore enraizada em u, onde a profundidade do pai de u é parent_depth
-    int _Height(Node* u, int parent_depth)
-    {
-      if(u == nullptr) return 0;
-
-      int depth = parent_depth + 1;
-      int height_left_tree = _Height(u->left, depth);
-      int height_right_tree = _Height(u->right, depth);
-      return 1 + std::max(height_left_tree, height_right_tree);
-    }
-
-    // Imprime uma representação gráfica da árvore. Consome espaço O(n²) e tempo O(n)
-    void Print()
-    {
-      if(Size() == 0)
-      {
-        std::cout << "\n";
-        return;
-      }
-      int num_rows = Height() * 3 - 2; 
-      int num_cols = Size();
-      int output [num_rows*num_cols];
-      for(int i = 0; i < num_rows*num_cols; i++) output[i] = EMPTY_CHAR;
-      int i_root = 0, j_root = root->num_left;
-      int index = i_root * num_cols + j_root;
-
-      output[index] = root->key;
-
-      _Print(num_rows, num_cols, output, root->left, true, i_root, j_root, root->num_left);
-      _Print(num_rows, num_cols, output, root->right, false, i_root, j_root, root->num_left);
-
-      Print_matrix(num_rows, num_cols, output);
-    }
-
+   
     // Retorna a maior chave da árvore
     int Max() 
     {
@@ -200,13 +160,6 @@ class Abb {
       if(u->right != nullptr) return _Max(u->right);
       else return u->key;
     }
-    
-    // Retorna a menor chave da árvore
-    int Min() 
-    {
-      return _Min(root)->key;
-    }
-
     Node* _Min(Node* u){
       if(u == nullptr) return nullptr; // Entra somente quando a árvore está vazia
       if(u->left != nullptr) return _Min(u->left);
@@ -257,17 +210,28 @@ class Abb {
 
       // Imprimindo actual key
       int index = i * num_cols + j;
-      //std::cout << "i = " << i << " j = " << j << std::endl;
       output[index] = u->key;
-      //Print_matrix(num_rows, num_cols, output);
 
       _Print(num_rows, num_cols, output, u->left, true, i, j, u->num_left);
       _Print(num_rows, num_cols, output, u->right, false, i, j, u->num_left);
     }
     
+    // Retorna altura da árvore
+    int Height()
+    {
+      return _Height(root, 0);
+    }
 
-  private:
-    Node* root;
+    // Retorna a altura da árvore enraizada em u, onde a profundidade do pai de u é parent_depth
+    int _Height(Node* u, int parent_depth)
+    {
+      if(u == nullptr) return 0;
+
+      int depth = parent_depth + 1;
+      int height_left_tree = _Height(u->left, depth);
+      int height_right_tree = _Height(u->right, depth);
+      return 1 + std::max(height_left_tree, height_right_tree);
+    }
 
     // Retorna o pai de um nó com chave x a ser inserido na árvore enraizada em r e edita o campo num_left do nós no caminho da raiz até o novo nó. Pressupõe que a chave não existe na árvore 
     // Não deve ser chamada para uma árvore vazia. Quem a chama é quem deve tratar esse caso
@@ -295,6 +259,39 @@ class Abb {
         }
         else{
           return _Insert(r->left, x);
+        }
+      }
+    }
+    
+    // Delete nó de chave x da árvore enraizada em u. Devolve a árvore resultante. É chamado somente quando é certificado que a chave x pertence a u
+    Node* _Delete(Node* u, int const x)
+    {
+      if(x > u->key){
+        u->right = _Delete(u->right, x);
+        return u;
+      }
+      else if(x < u->key){
+        u->left =_Delete(u->left, x); 
+        u->num_left--;
+        return u; 
+      }
+      else
+      { // x == u->key
+        if(u->left == nullptr){ // Sem filho esquerdo. Talvez tenha filho direito
+          return u->right;
+        }
+        else if(u->right == nullptr) // Sem filho direito. Com filho esquerdo
+        {
+          return u->left;
+        }
+        else // Tem os dois filhos
+        { 
+          Node* sucessor = _Min(u->right); // Sucessor de u na árvore
+          int tmp = u->key;
+          u->key = sucessor->key;
+          sucessor->key = tmp;
+          u->right = _Delete(u->right, x);
+          return u;
         }
       }
     }
