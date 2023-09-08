@@ -103,7 +103,8 @@ class Heap{
     // Equivalente a testar se log2(size(r) + 1) é inteiro
     bool IsComplete(Node* r)
     {
-      int n = r->size;
+      int n = r->size + 1; // Tamanho da árvore enraizada em r
+      if(n == 1) return false;
       return std::log2(n+1) == (int) std::floor(std::log2(n+1));
     }
 
@@ -255,10 +256,10 @@ class Heap{
 
 };
 
-// Cópia de IsComplete para teste básico
+// Cópia de IsComplete para teste básico. "Recebe o size da sub-ávore enraizada em baixo"
 bool IsComplete(int n)
 {
-  return std::log2(n+1) == (int) std::floor(std::log2(n+1));
+  return std::log2(n+2) == (int) std::floor(std::log2(n+2));
 }
 
 // Testa função IsComplete. OK
@@ -269,7 +270,7 @@ void Teste0()
   }
 }
 
-// Primeiro teste para depurar Insert
+// Primeiro teste para depurar Insert. Parece OK
 void Teste1()
 {
   Heap h = Heap();
@@ -291,13 +292,13 @@ void Teste1()
   h.Insert(18);
   h.PrintPre();
   h.Print();
-  //h.Insert(20);
-  //h.Insert(15);
-  //h.Insert(7);
-  //h.Insert(25);
-  //h.Insert(31);
-  //h.PrintPre();
-  //h.Print();
+  h.Insert(20);
+  h.Insert(15);
+  h.Insert(7);
+  h.Insert(25);
+  h.Insert(31);
+  h.PrintPre();
+  h.Print();
 }
 
 int main()
