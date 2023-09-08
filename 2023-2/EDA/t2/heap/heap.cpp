@@ -7,6 +7,7 @@
 #include <cmath>
 
 #define EMPTY_CHAR -12345
+#define INFITY 1000000
 
 class Node {
   public:
@@ -41,6 +42,14 @@ class Heap{
       _PrintPre(root);
       std::cout << "\n";
     }
+
+    // Remove o nó de menor chave do heap
+    void DeleteMin()
+    {
+      root = Sink(root);
+      //std::cout << "Delete completado\n";
+    }
+
      // Imprime uma representação gráfica da árvore. Consome espaço O(n²) e tempo O(n)
     void Print()
     {
@@ -97,6 +106,35 @@ class Heap{
 
       r->size++;
       return r;
+    }
+
+    // Deleta o nó da raiz enraizada em u e devolve a árvore resultante 
+    Node* Sink(Node* u)
+    {
+      //std::cout << "Sinking " << (u == nullptr ? "NULL" : std::to_string(u->key)) << "\n";
+      if(u->left == nullptr && u->right == nullptr) {
+        return nullptr;
+      }
+
+      Node* max_child;
+      int left_key = (u->left == nullptr ? -INFITY : u->left->key);
+      int right_key = (u->right == nullptr ? -INFITY : u->right->key);
+
+      if(left_key > right_key){
+        max_child = u->left;
+        u->key = max_child->key;
+        u->left = Sink(u->left);
+        if(u->left == nullptr) { u->left = u->right; u->right = nullptr;}
+      }
+      else{
+        max_child = u->right;
+        u->key = max_child->key;
+        u->right = Sink(u->right);
+      }
+
+      u->size--;
+      //PrintPre();
+      return u;
     }
 
     // Verifica se árvore enraizada em r é completa
@@ -301,8 +339,53 @@ void Teste1()
   h.Print();
 }
 
+// Teste inicial para DeleteMin().
+void Teste2()
+{
+  Heap h = Heap();
+  h.Insert(30);
+  h.Insert(24);
+  h.Insert(25);
+  h.Insert(19);
+  h.Insert(18);
+  h.Insert(7);
+  h.PrintPre();
+  h.Print();
+
+  h.DeleteMin();
+  h.PrintPre();
+  h.Print();
+
+  h.DeleteMin();
+  h.PrintPre();
+  h.Print();
+
+
+  h.DeleteMin();
+  h.PrintPre();
+  h.Print();
+
+
+  h.DeleteMin();
+  h.PrintPre();
+  h.Print();
+
+
+  h.DeleteMin();
+  h.PrintPre();
+  h.Print();
+
+
+  h.DeleteMin();
+  h.PrintPre();
+  h.Print();
+
+
+}
+
 int main()
 {
   //Teste0();
-  Teste1();
+  //Teste1();
+  Teste2();
 }
