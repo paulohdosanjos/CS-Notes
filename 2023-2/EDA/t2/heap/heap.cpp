@@ -44,7 +44,7 @@ class Heap{
     }
 
     // Remove o nó de menor chave do heap
-    void DeleteMin()
+    void DeleteMax()
     {
       root = Sink(root);
       //std::cout << "Delete completado\n";
@@ -341,7 +341,7 @@ void Teste1()
   h.Print();
 }
 
-// Teste inicial para DeleteMin(). Parece OK
+// Teste inicial para DeleteMax(). Parece OK
 void Teste2()
 {
   Heap h = Heap();
@@ -354,31 +354,31 @@ void Teste2()
   h.PrintPre();
   h.Print();
 
-  h.DeleteMin();
+  h.DeleteMax();
   h.PrintPre();
   h.Print();
 
-  h.DeleteMin();
-  h.PrintPre();
-  h.Print();
-
-
-  h.DeleteMin();
+  h.DeleteMax();
   h.PrintPre();
   h.Print();
 
 
-  h.DeleteMin();
+  h.DeleteMax();
   h.PrintPre();
   h.Print();
 
 
-  h.DeleteMin();
+  h.DeleteMax();
   h.PrintPre();
   h.Print();
 
 
-  h.DeleteMin();
+  h.DeleteMax();
+  h.PrintPre();
+  h.Print();
+
+
+  h.DeleteMax();
   h.PrintPre();
   h.Print();
 
@@ -399,7 +399,7 @@ void Teste3()
   h.Print();
   std::cout << "MAX = " << h.ExtractMax() << "\n";
 
-  h.DeleteMin();
+  h.DeleteMax();
   h.Print();
   std::cout << "MAX = " << h.ExtractMax() << "\n";
 
