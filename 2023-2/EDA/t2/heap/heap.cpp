@@ -74,6 +74,8 @@ class Heap{
 
       Print_matrix(num_rows, num_cols, output);
     }
+
+    int ExtractMax(){ return root->key;}
  
   private:
     Node* root;
@@ -383,9 +385,30 @@ void Teste2()
 
 }
 
+// Testa ExtractMax(). Parece OK
+void Teste3()
+{
+  Heap h = Heap();
+  h.Insert(54);
+  h.Insert(32);
+  h.Insert(67);
+  h.Insert(31);
+  h.Insert(12);
+  h.Insert(43);
+  h.Insert(44);
+  h.Print();
+  std::cout << "MAX = " << h.ExtractMax() << "\n";
+
+  h.DeleteMin();
+  h.Print();
+  std::cout << "MAX = " << h.ExtractMax() << "\n";
+
+}
+
 int main()
 {
   //Teste0();
   //Teste1();
-  Teste2();
+  //Teste2();
+  Teste3();
 }
