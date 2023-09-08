@@ -38,7 +38,7 @@ class Heap{
     // Imprime a árvore em pré-ordem. Para depuração
     void PrintPre()
     {
-      std::cout << "Size : " << root->size + 1 << std::endl;
+      std::cout << "Size : " << (root == nullptr ? 0 : root->size + 1) << std::endl;
       _PrintPre(root);
       std::cout << "\n";
     }
@@ -53,7 +53,7 @@ class Heap{
      // Imprime uma representação gráfica da árvore. Consome espaço O(n²) e tempo O(n)
     void Print()
     {
-      int size = root->size + 1;
+      int size = (root == nullptr ? 0 : root->size + 1);
       if(size == 0)
       {
         std::cout << "\n";
@@ -339,7 +339,7 @@ void Teste1()
   h.Print();
 }
 
-// Teste inicial para DeleteMin().
+// Teste inicial para DeleteMin(). Parece OK
 void Teste2()
 {
   Heap h = Heap();
