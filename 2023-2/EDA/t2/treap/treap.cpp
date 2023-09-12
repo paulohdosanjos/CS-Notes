@@ -27,107 +27,25 @@ class Treap {
   public:
     Treap(int seed) {std::srand(seed); root = nullptr;}
 
-    // Insere um nó com chave x na treap. Caso já existe um nó com essa chave, nada acontece.
+    // Insere um nó com chave x na treap. Caso já exista um nó com essa chave, nada acontece.
     void Insert(const int x) 
     {
-      //std::cout << "Inserindo " << x << "\n";
-      
       if(root == nullptr) { // Árvore vazia
-        //std::cout << "Primeiro nó\n";
         Node* u = new Node(x, _rand(), 0, nullptr, nullptr);
         root = u;
         return;
       }
       if(SearchKey(x)) return;
       _Insert(root, x);
-      //std::cout << "Nó inserido na árvore, consertando heap...\nAntes de consertar:\n";
-      //PrintPre();
-      root = conserta_heap(root, x);
-      //std::cout << "Depois de consertar:\n";
-      //PrintPre();
+      root = Swin(root, x);
     }
     
-    // Remove nó e devolve a raiz árvore resultante
+    // Remove nó com chave x da treap 
     void Delete(const int x)
     {
-      //if(!SearchKey(x)) return; // Não há chave x na árvore
       root = _Delete(root, x);
-      assert(verify_heap());
+      assert(verify_heap()); // Verifica propriedade do heap
     }
-
-    bool verify_heap()
-    {
-      return _verify_heap(root);
-    }
-
-    bool _verify_heap(Node* u)
-    {
-      if(u == nullptr) return true;
-      int left_priority = (u->left == nullptr ? -INFTY : u->left->priority);
-      int right_priority = (u->right == nullptr ? -INFTY : u->right->priority);
-      if(u->priority < left_priority || u->priority < right_priority) return false;
-      return _verify_heap(u->left) && _verify_heap(u->right);
-    }
-
-    Node* conserta_heap(Node* u, int x)
-    {
-      //std::cout << "conserta_heap(" << (u == nullptr ? "NULL" : std::to_string(u->key)) << ", " << x << ")\n";
-      if(u == nullptr) return nullptr;
-
-      if(x > u->key)
-      {
-        u->right = conserta_heap(u->right, x);
-        if(u->right != nullptr && u->right->priority > u->priority) {
-          Node* child = u->right;
-          //std::cout << "Rotacionando para a esquerda\n";
-          RotateLeft(u, u->right); 
-          return child;
-        }
-      }
-
-      if(x < u->key)
-      {
-        u->left = conserta_heap(u->left, x);
-        if(u->left != nullptr && u->left->priority > u->priority) {
-          //std::cout << "Rotacionando para a direita\n";
-          Node* child = u->left;
-          RotateRight(u, child);
-          //std::cout << "Depois de rotacionar:\n";
-          //std::cout << "u:" << u->key << "\n";
-          //std::cout << "u->left:" << (u->left == nullptr ? "null" : std::to_string(u->left->key)) << "\n";
-          //std::cout << "u->right:" << (u->right == nullptr ? "null" : std::to_string(u->right->key)) << "\n";
-          //std::cout << "child:" << (child == nullptr ? "null" : std::to_string(child->key)) << "\n";
-          //std::cout << "child->left:" << (child->left == nullptr ? "null" : std::to_string(child->left->key)) << "\n";
-          //std::cout << "child->right:" << (child->right == nullptr ? "null" : std::to_string(child->right->key))<< "\n";
-          return child;
-        }
-      }
-        return u; 
-    }
-
-    void RotateLeft(Node* u, Node* child)
-    {
-      assert(child == u->right);
-
-      u->right = child->left;
-      child->left = u;
-      int beta = child->num_left;
-      int alpha = u->num_left;
-      child->num_left = alpha + beta + 1;
-    }
-
-    void RotateRight(Node* u, Node* child)
-    {
-      assert(child == u->left);
-
-      u->left = child->right;
-      child->right = u;
-      int beta = child->num_left;
-      int alpha = u->num_left -1 - beta;
-      u->num_left = alpha;
- 
-    }
-
 
     // Imprime a árvore em pré-ordem. Para depuração
     void PrintPre()
@@ -137,13 +55,14 @@ class Treap {
       std::cout << "\n";
     }
 
+    // Para testar altura da árvore
     void PrintInfo()
     {
       int size = Size();
       std::cout << "Size = " << size << ", Height = " << Height() << ", Log(Size) = " << std::log2(size) << "\n";
     }
 
-    // Imprime uma representação gráfica da árvore. Consome espaço O(n²) e tempo O(n)
+    // Imprime uma representação gráfica da árvore. Consome espaço O(nh) e tempo O(n)?
     void Print()
     {
       if(Size() == 0)
@@ -186,6 +105,72 @@ class Treap {
   private:
     Node* root;
  
+    // Sobe um nó adicionado numa folha até sua altura correta
+    Node* Swin(Node* u, int x)
+    {
+      if(u == nullptr) return nullptr;
+
+      if(x > u->key)
+      {
+        u->right = Swin(u->right, x);
+        if(u->right != nullptr && u->right->priority > u->priority) {
+          Node* child = u->right;
+          RotateLeft(u, u->right); 
+          return child;
+        }
+      }
+
+      if(x < u->key)
+      {
+        u->left = Swin(u->left, x);
+        if(u->left != nullptr && u->left->priority > u->priority) {
+          Node* child = u->left;
+          RotateRight(u, child);
+          return child;
+        }
+      }
+        return u; 
+    }
+
+    void RotateLeft(Node* u, Node* child)
+    {
+      assert(child == u->right);
+
+      u->right = child->left;
+      child->left = u;
+      int beta = child->num_left;
+      int alpha = u->num_left;
+      child->num_left = alpha + beta + 1;
+    }
+
+    void RotateRight(Node* u, Node* child)
+    {
+      assert(child == u->left);
+
+      u->left = child->right;
+      child->right = u;
+      int beta = child->num_left;
+      int alpha = u->num_left -1 - beta;
+      u->num_left = alpha;
+ 
+    }
+
+    // Verifica se a propriedade do heap é válida na treap
+    bool verify_heap()
+    {
+      return _verify_heap(root);
+    }
+
+    // Verifica se a propriedade do heap é válida na treap enraizada em u
+    bool _verify_heap(Node* u)
+    {
+      if(u == nullptr) return true;
+      int left_priority = (u->left == nullptr ? -INFTY : u->left->priority);
+      int right_priority = (u->right == nullptr ? -INFTY : u->right->priority);
+      if(u->priority < left_priority || u->priority < right_priority) return false;
+      return _verify_heap(u->left) && _verify_heap(u->right);
+    }
+
     void _PrintPre(const Node* const u)
     {
       if(u == nullptr) return;
@@ -195,13 +180,13 @@ class Treap {
 
     }
 
-   // Retorna o número de digitos de n. Converter para uma macro
+   // Retorna o número de digitos de n. Usada na função Print()
     int number_of_digits(int n)
     {
       return (int) (std::log10(n) + 1);
     }
 
-    
+    // Função auxiliar para a função Print()
     void Print_matrix(int num_rows, int num_cols, int matrix[]){
       // Original arrow mapping
       // arrow[0] = '/'
@@ -247,23 +232,27 @@ class Treap {
       } 
     }
 
-   
-    // Retorna a maior chave da árvore
+    // Retorna a maior chave da árvore. Usada em Print()
     int Max() 
     {
       return _Max(root);
     }
 
+    // Retonar a maior chave da árvore enraizada em u
     int _Max(Node* u){
       if(u == nullptr) return -INFTY;
       if(u->right != nullptr) return _Max(u->right);
       else return u->key;
     }
+
+    // Retonar a menor chave da árvore enraizada em u
     Node* _Min(Node* u){
       if(u == nullptr) return nullptr; // Entra somente quando a árvore está vazia
       if(u->left != nullptr) return _Min(u->left);
       else return u;
     }
+
+    // Função auxiliar usada em Print()
     void _Print(int num_rows, int num_cols, int output[], Node* u, bool is_left_child, int i_parent, int j_parent, int num_left_parent)
     {
       if(u == nullptr) return;
@@ -315,7 +304,7 @@ class Treap {
       _Print(num_rows, num_cols, output, u->right, false, i, j, u->num_left);
     }
     
-    // Retorna altura da árvore
+    // Retorna altura da árvore. Usada em Print()
     int Height()
     {
       return _Height(root, 0);
@@ -332,8 +321,9 @@ class Treap {
       return 1 + std::max(height_left_tree, height_right_tree);
     }
 
-    // Retorna o pai de um nó com chave x a ser inserido na árvore enraizada em r e edita o campo num_left do nós no caminho da raiz até o novo nó. Pressupõe que a chave não existe na árvore 
-    // Não deve ser chamada para uma árvore vazia. Quem a chama é quem deve tratar esse caso
+    // Insere um novo nó como folha com chave r na árvore enraizada em r e retorna a árvore resultante.
+    // Não deve ser chamada para uma árvore vazia. Quem a chama é quem deve tratar esse caso.
+    // Não trata a propriedade de heap, isso é feito pela função Insert()
     Node* _Insert(Node* const r, const int x)
     {
       assert(r != nullptr);
@@ -363,11 +353,11 @@ class Treap {
       }
     }
     
-    // Delete nó de chave x da árvore enraizada em u. Devolve a árvore resultante. É chamado somente quando é certificado que a chave x pertence a u
+    // Deleta nó de chave x da treap enraizada em u. Devolve a treap resultante. Se a chave não existir na treap, nada acontece 
     Node* _Delete(Node* u, int const x)
     {
-      //std::cout << "Delete(" << (u == nullptr ? "null" : std::to_string(u->key)) << ", " << x << ")\n";
       if(u == nullptr) return nullptr; // Chave não encontrada
+
       if(x > u->key){
         u->right = _Delete(u->right, x);
         return u;
@@ -380,29 +370,23 @@ class Treap {
       else
       { // x == u->key
         if(u->left == nullptr && u->right == nullptr){ // É folha 
-          //std::cout << "folha: só remover\n";
           return nullptr; 
         }
-        else // Não é folha . Rotaciona para baixo
+        else // Não é folha. Rotaciona para baixo para manter a proprieda de heap
         { 
-          //std::cout << "rotacionando para baixo\n";
           int left_priority = (u->left == nullptr ? -INFTY : u->left->priority);
           int right_priority = (u->right == nullptr ? -INFTY : u->right->priority);
+
+          // Determina qual filho toma o lugar de u
           if(left_priority > right_priority){
             Node* child = u->left;
             RotateRight(u, child);
-            //std::cout << "Depois de rotacionar para a direita: \n";
-            //_PrintPre(child);
-            //std::cout << "\n";
             child->right = _Delete(child->right, x);
             return child;
           }
           else{
             Node* child = u->right;
             RotateLeft(u, child);
-            //std::cout << "Depois de rotacionar para a esquerda: \n";
-            //_PrintPre(child);
-            //std::cout << "\n";
             child->left = _Delete(child->left, x);
             child->num_left--;
             return child;
@@ -439,8 +423,6 @@ class Treap {
       else if(x < n->key) return _SearchNode(n->left, x);
       else return _SearchNode(n->right, x);
     }
-
-    
 
     int _Size(Node* u)
     {
@@ -514,7 +496,7 @@ void Teste4(int seed)
   t.Print();
 }
 
-// Teste final para delete.
+// Teste final para delete. Parece OK
 void Teste3(int seed)
 {
   //Inserindo elementos
