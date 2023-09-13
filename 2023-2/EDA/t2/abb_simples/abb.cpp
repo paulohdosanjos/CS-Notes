@@ -99,6 +99,7 @@ class Abb {
    // Retorna o número de digitos de n. Converter para uma macro
     int number_of_digits(int n)
     {
+      if (n == 0) return 1;
       return (int) (std::log10(n) + 1);
     }
 
@@ -113,8 +114,8 @@ class Abb {
       char arrows[] = {'/', '-', '*', '\\', ' '};
 
       int n1 = number_of_digits(Max());
-      int n2;
-      n2 = (Min() < 0 ? 1 + number_of_digits(std::abs(Min())) : 0);
+      int min = Min();
+      int n2 = (min < 0 ? 1 + number_of_digits(std::abs(min)) : 0);
       int cell_width = std::max(n1,n2);
       std::string empty_cell (cell_width,' '); 
 
