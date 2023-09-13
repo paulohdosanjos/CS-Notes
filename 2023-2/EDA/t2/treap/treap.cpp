@@ -4,12 +4,14 @@
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
+#include <sstream>
 
 
 #define INFTY 1000000
 #define EMPTY_CHAR -12345
+#define MAX_PRIORITY 12345
 
-#define _rand() (std::rand() % 1001)
+#define _rand() (std::rand() % MAX_PRIORITY)
 
 // Nó não terá campo apontador para o pai. Mantenho a quantidade de nós da sub-árvore esquerda para implementar uma função de Print() bonitinha da árvore.
 class Node {
@@ -25,12 +27,16 @@ class Node {
 
 class Treap {
   public:
+    
     Treap(int seed) {std::srand(seed); root = nullptr;}
+    //Treap() {Treap(121);}
+    Treap() {std::srand(121); root = nullptr;}
 
     // Insere um nó com chave x na treap. Caso já exista um nó com essa chave, nada acontece.
     void Insert(const int x) 
     {
       if(root == nullptr) { // Árvore vazia
+        //std::cout << "árvore vazia, criando raiz" << std::endl;
         Node* u = new Node(x, _rand(), 0, nullptr, nullptr);
         root = u;
         return;
@@ -47,22 +53,13 @@ class Treap {
       assert(verify_heap()); // Verifica propriedade do heap
     }
 
-    // Imprime a árvore em pré-ordem. Para depuração
-    void PrintPre()
-    {
-      std::cout << "Size : " << Size() << std::endl;
-      _PrintPre(root);
-      std::cout << "\n";
-    }
-
-    // Para testar altura da árvore
-    void PrintInfo()
-    {
-      int size = Size();
-      std::cout << "Size = " << size << ", Height = " << Height() << ", Log(Size) = " << std::log2(size) << "\n";
-    }
-
-    // Imprime uma representação gráfica da árvore. Consome espaço O(nh) e tempo O(n)?
+    // Verifica se chave x está na árvore
+    bool Search(int x){ return SearchKey(x); }
+    
+    // Retorna a menor chave da árvore
+    int Min() { return _Min(root)->key; }
+    
+    // Imprime uma representação gráfica da árvore. Consome espaço O(nh) e tempo O(n)?. Tem bug para árvores com chave nula
     void Print()
     {
       if(Size() == 0)
@@ -85,18 +82,8 @@ class Treap {
       Print_matrix(num_rows, num_cols, output);
     }
     
-    // Retorna a menor chave da árvore
-    int Min() 
-    {
-      return _Min(root)->key;
-    }
-
-    // Verifica se chave x está na árvore
-    bool Search(const int x)
-    {
-      return SearchKey(x);
-    }
     
+
     int Size()
     {
       return _Size(root);
@@ -183,6 +170,7 @@ class Treap {
    // Retorna o número de digitos de n. Usada na função Print()
     int number_of_digits(int n)
     {
+      if(n == 0) return 1;
       return (int) (std::log10(n) + 1);
     }
 
@@ -198,7 +186,8 @@ class Treap {
 
       int n1 = number_of_digits(Max());
       int n2;
-      n2 = (Min() < 0 ? 1 + number_of_digits(std::abs(Min())) : 0);
+      int min = Min();
+      n2 = (min < 0 ? 1 + number_of_digits(std::abs(min)) : 0);
       int cell_width = std::max(n1,n2);
       std::string empty_cell (cell_width,' '); 
 
@@ -450,7 +439,7 @@ void Teste1(int seed)
   t.Insert(19);
   t.Insert(9);
   std::cout << t.Size() << "\n";
-  t.PrintPre();
+  //t.PrintPre();
   t.Print();
 }
 
@@ -462,7 +451,7 @@ void Teste2(int seed)
     t.Insert(i);
   }
   //t.PrintPre();
-  t.PrintInfo();
+  //t.PrintInfo();
   //t.Print();
 }
 
@@ -517,18 +506,58 @@ void Teste3(int seed)
   for(int i = 0; i < n; i++){
     std::cout << "Deleta " << delete_list[i] << std::endl;
     t.Delete(delete_list[i]);
-    t.PrintPre();
+    //t.PrintPre();
     t.Print();
   }
 }
 
+// Cliente teste da tarefa
+void Teste()
+{
+  Treap t = Treap();
+  for(std::string line; std::getline(std::cin, line) ; ) {
+    int opt, x;
+    std::istringstream iss = std::istringstream(line);
+    iss >> opt >> x;
+    //std::cout << opt << " " << x << "\n";
+
+    switch (opt) {
+      case 1:
+        //std::cout << "oi\n";
+        t.Insert(x);
+        break;
+      case 2:
+        t.Delete(x);
+        break;
+      case 3:
+        std::cout << (t.Search(x) ? "1" : "0") << "\n";
+        break;
+      case 4:
+        std::cout << t.Min() << "\n";
+        break;
+      case 5:
+        t.Print();
+        break;
+    }
+  }
+}
+
+void Teste5()
+{
+  Treap t = Treap();
+  t.Insert(1);
+  t.Print();
+}
+
 int main (int argc, char *argv[]) {
 
-  int seed = std::atoi(argv[1]);
+  //int seed = std::atoi(argv[1]);
   //Teste1(seed);
   //Teste2(seed);
-  Teste3(seed);
+  //Teste3(seed);
   //Teste4(seed);
+  //Teste5();
+  Teste();
   
   return 0;
 }
