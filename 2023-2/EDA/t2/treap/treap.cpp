@@ -39,7 +39,6 @@ class Treap {
       if(SearchKey(x)) return; // Essa primeira passada evita que o campo num_left seja alterado nos nós do caminho se a chave já estiver presente na treap
  
       root = _Insert(root, x);
-      root = Swin(root, x);
       assert(verify_heap()); // Verifica propriedade do heap
     }
     
@@ -55,7 +54,13 @@ class Treap {
     
     // Retorna a menor chave da árvore
     int Min() const { return _Min(root)->key; }
-    
+
+    // Retorna altura da árvore. Usada em Print()
+    int Height() const
+    {
+      return _Height(root, 0);
+    } 
+
     // Imprime uma representação gráfica da árvore. Consome espaço O(nh) e tempo O(n)?. Tem bug para árvores com chave nula
     void Print() const
     {
@@ -89,33 +94,6 @@ class Treap {
   private:
     Node* root;
  
-    // Sobe um nó adicionado como folha de chave x até sua altura correta na árvore enraizada em r
-    Node* Swin(Node* r, int x)
-    {
-      if(r == nullptr) return nullptr;
-
-      if(x > r->key)
-      {
-        r->right = Swin(r->right, x);
-        if(r->right != nullptr && r->right->priority > r->priority) {
-          Node* child = r->right;
-          RotateLeft(r, child); 
-          return child;
-        }
-      }
-
-      if(x < r->key)
-      {
-        r->left = Swin(r->left, x);
-        if(r->left != nullptr && r->left->priority > r->priority) {
-          Node* child = r->left;
-          RotateRight(r, child);
-          return child;
-        }
-      }
-        return r; 
-    }
-
     void RotateLeft(Node* u, Node* child)
     {
       assert(child == u->right);
@@ -291,11 +269,7 @@ class Treap {
       _Print(num_rows, num_cols, output, u->right, false, i, j, u->num_left);
     }
     
-    // Retorna altura da árvore. Usada em Print()
-    int Height() const
-    {
-      return _Height(root, 0);
-    }
+   
 
     // Retorna a altura da árvore enraizada em u, onde a profundidade do pai de u é parent_depth
     int _Height(Node* u, int parent_depth) const
@@ -308,22 +282,37 @@ class Treap {
       return 1 + std::max(height_left_tree, height_right_tree);
     }
 
-    // Insere um novo nó como folha com chave r na árvore enraizada em r e retorna a árvore resultante.
-    // Não trata a propriedade de heap, isso é feito pela função Insert()
-    Node* _Insert(Node* const r, const int x)
+    // Insere um novo nó com chave x na árvore enraizada em r
+    Node* _Insert(Node* r, const int x)
     {
       if(r == nullptr) return new Node(x, _rand(), 0, nullptr, nullptr); // Árvore vazia
       
       if(x > r->key) 
+      {
         r->right = _Insert(r->right, x);
+
+        if(r->right->priority > r->priority)
+        {
+          Node* child = r->right;
+          RotateLeft(r, child);
+          r = child;
+        }
+      }
      
       else if(x < r->key)
       {
         r->num_left++;
         r->left = _Insert(r->left, x);
-      }
 
-      return r;
+        if(r->left->priority > r->priority)
+        {
+          Node* child = r->left;
+          RotateRight(r, child);
+          r = child;
+        }
+    }
+
+    return r;
     }
     
     // Deleta nó de chave x da treap enraizada em u. Devolve a treap resultante. Se a chave não existir na treap, nada acontece 
@@ -344,18 +333,17 @@ class Treap {
         return u; 
       }
 
-      else
-      { // x == u->key
-        if(u->left == nullptr && u->right == nullptr) return nullptr; // Folha
-       
-        else // Não é folha. Rotaciona para baixo para manter a propriedade de heap
-        { 
-          int left_priority = (u->left == nullptr ? -INFTY : u->left->priority);
-          int right_priority = (u->right == nullptr ? -INFTY : u->right->priority);
+      else // x == u->key
+      { 
+        // Só faço o shortcut
+        if(u->left == nullptr) return u->right; 
+        if(u->right == nullptr) return u->left;
 
+        else //Tem os dois filhos. Desço rotacionando para manter a propriedade de heap
+        { 
           // Determina qual filho toma o lugar de u
           Node* child;
-          if(left_priority > right_priority){
+          if(u->left->priority > u->right->priority){
             child = u->left;
             RotateRight(u, child);
             child->right = _Delete(child->right, x);
@@ -434,9 +422,10 @@ void Teste1(int seed)
 void Teste2(int seed)
 {
   Treap t = Treap(seed);
-  for(int i = 1; i <= 2000000; i++){
+  for(int i = 1; i <= 20000; i++){
     t.Insert(i);
   }
+  std::cout << t.Height() << "\n";
   //t.PrintPre();
   //t.PrintInfo();
   //t.Print();
@@ -538,13 +527,13 @@ void Teste5()
 
 int main (int argc, char *argv[]) {
 
-  int seed = std::atoi(argv[1]);
+  //int seed = std::atoi(argv[1]);
   //Teste1(seed);
   //Teste2(seed);
-  Teste3(seed);
+  //Teste3(seed);
   //Teste4(seed);
   //Teste5();
-  //Teste();
+  Teste();
   
   return 0;
 }
