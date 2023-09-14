@@ -1,53 +1,38 @@
-// Implementação de uma treap com uma função Print() mais bonitinha.
-// Não imprimo a prioridade, mas após cada delete e insert tem um assert que verifica se a propriedade de heap é válida na treap.
+// Tarefa t2 - Treap normal
+// Paulo Henrique Albuquerque
+// 12542251
+
 #include <iostream>
 #include <string>
-#include <cassert>
-#include <cmath>
-#include <cstdlib>
 #include <sstream>
+#include <vector>
 
 
-#define INFTY 1000000
-#define EMPTY_CHAR -12345
 #define MAX_PRIORITY 1001
 
 #define _rand() (std::rand() % MAX_PRIORITY)
 
-// Nó não terá campo apontador para o pai. Mantenho a quantidade de nós da sub-árvore esquerda para implementar uma função de Print() bonitinha da árvore.
 class Node {
   public:
     int priority;
     int key;
-    int num_left; // Número de nós na sub-árvore esquerda
     Node* left;
     Node* right;
    
-    Node(const int _key, int _priority, int _num_left, Node* l, Node* r): key(_key), priority(_priority), num_left(_num_left), left(l), right(r) {}
+    Node(const int _key, int _priority, int _num_left, Node* l, Node* r): key(_key), priority(_priority), left(l), right(r) {}
 };
 
 class Treap {
 
   public:
     
-    Treap(int seed) {std::srand(seed); root = nullptr;}
-    Treap() {std::srand(121); root = nullptr;}
+    Treap() {std::srand(5); root = nullptr;}
 
     // Insere um nó com chave x na treap. Caso já exista um nó com essa chave, nada acontece.
-    void Insert(const int x) 
-    {
-      if(SearchKey(x)) return; // Essa primeira passada evita que o campo num_left seja alterado nos nós do caminho se a chave já estiver presente na treap
- 
-      root = _Insert(root, x);
-      assert(verify_heap()); // Verifica propriedade do heap
-    }
+    void Insert(const int x) { root = _Insert(root, x); }
     
     // Remove nó com chave x da treap 
-    void Delete(const int x)
-    {
-      root = _Delete(root, x);
-      assert(verify_heap()); // Verifica propriedade do heap
-    }
+    void Delete(const int x) { root = _Delete(root, x); }
 
     // Verifica se chave x está na árvore
     bool Search(int x) const { return SearchKey(x); }
@@ -422,16 +407,17 @@ void Teste1(int seed)
 void Teste2(int seed)
 {
   Treap t = Treap(seed);
-  for(int i = 1; i <= 20000; i++){
+  for(int i = 1; i <= 40; i++){
     t.Insert(i);
   }
   std::cout << t.Height() << "\n";
+  t.Print();
   //t.PrintPre();
   //t.PrintInfo();
   //t.Print();
 }
 
-// Teste inicial para delete
+// Teste inicial para delete. Parece OK
 void Teste4(int seed)
 {
   Treap t = Treap(seed);
@@ -525,15 +511,28 @@ void Teste5()
   t.Print();
 }
 
+void Teste6(int seed)
+{
+  Treap t = Treap(seed);
+  t.Insert(10);
+  t.Insert(7);
+  t.Insert(12);
+  t.Insert(15);
+  t.Insert(20);
+  t.Insert(5);
+  t.Print();
+}
+
 int main (int argc, char *argv[]) {
 
-  //int seed = std::atoi(argv[1]);
+  int seed = std::atoi(argv[1]);
   //Teste1(seed);
   //Teste2(seed);
   //Teste3(seed);
   //Teste4(seed);
   //Teste5();
-  Teste();
+  //Teste();
+  Teste6(seed);
   
   return 0;
 }
