@@ -43,8 +43,8 @@ class Abb {
 
     int K(int k) { return _K(root, k); }
     
-    // Remove folha com chave x da treap 
-    //void Delete(const int x) { root = _Delete(root, x); }
+    // Remove folha com chave x da árvore 
+    void Delete(const int x) { root = _Delete(root, x); }
 
     // Verifica se folha com chave x está na árvore
     //bool Search(int x) const { return _Search(root, x); }
@@ -111,47 +111,27 @@ class Abb {
     }
     
     // Deleta nó de chave x da treap enraizada em u. Devolve a treap resultante. Se a chave não existir na treap, nada acontece 
-//    Node* _Delete(Node* u, int const x)
-//    {
-//      if(u == nullptr) return nullptr; // Chave não encontrada
-//
-//      if(x > u->key)
-//      {
-//        u->right = _Delete(u->right, x);
-//        return u;
-//      }
-//
-//      else if(x < u->key)
-//      {
-//        u->left =_Delete(u->left, x); 
-//        return u; 
-//      }
-//
-//      else // x == u->key
-//      { 
-//        // Só faço o shortcut
-//        if(u->left == nullptr) return u->right; 
-//        if(u->right == nullptr) return u->left;
-//
-//        else //Tem os dois filhos. Desço rotacionando para manter a propriedade de heap
-//        { 
-//          // Determina qual filho toma o lugar de u
-//          Node* child;
-//          if(u->left->priority > u->right->priority){
-//            child = u->left;
-//            RotateRight(u, child);
-//            child->right = _Delete(child->right, x);
-//          }
-//          else{
-//            child = u->right;
-//            RotateLeft(u, child);
-//            child->left = _Delete(child->left, x);
-//          }
-//          return child;
-//        }
-//      }
-//    }
-//
+    Node* _Delete(Node* r, int const x)
+    {
+      if(r->left == nullptr && r->right == nullptr) return nullptr;
+
+      if(x > r->left->max)
+      {
+        r->right = _Delete(r->right, x);
+        if(r->right == nullptr) return r->left; // Shortcut
+      }
+
+      else
+      {
+        r->left =_Delete(r->left, x); 
+        if(r->left == nullptr) return r->right; // Shortcut
+      }
+
+      r->num--;
+      r->max = std::max(r->left->max, r->right->max);
+      return r;
+    }
+
     // v é o pai e u é o filho
     void RotateLeft(Node* v, Node* u)
     {
@@ -293,9 +273,34 @@ void Teste3()
   }
 }
 
+// Boss Fight: Teste para Delete(). Parece OK
+void Teste4()
+{
+  Abb a = Abb();
+  int insert_list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
+  int size = (int) (sizeof(insert_list) / sizeof(insert_list[0]));
+  for(int i = 0; i < size; i++){
+    a.Insert(insert_list[i]);
+  }
+
+  std::cout << "Antes de deletar:\n";
+  a.Print();
+  std::cout << "*********************\n";
+
+  int delete_list[] = {9, 5, 23, 41, 40, 19, 3, 11, 16, 14, 20, 33};
+  for(int i = 0; i < size; i++){
+    std::cout << "Deleta " << delete_list[i] << "\n";
+    a.Delete(delete_list[i]);
+    a.Print();
+    std::cout << "*********************\n";
+  }
+  a.Print();
+}
+
 int main()
 {
   //Teste1();
   //Teste2();
-  Teste3();
+  //Teste3();
+  Teste4();
 }
