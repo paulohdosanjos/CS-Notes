@@ -45,7 +45,7 @@ class Abb {
     int K(int k) { return _K(root, k); }
     
     // Remove folha com chave x da árvore 
-    void Delete(const int x) { root = _Delete(root, x); }
+    void Delete(const int t) { root = _Delete(root, t); }
 
     // Verifica se folha com chave x está na árvore
     //bool Search(int x) const { return _Search(root, x); }
@@ -55,6 +55,8 @@ class Abb {
 
     // Imprime a árvore 
     void Print() const { _Print(root, 0); }
+
+    //int Size() const { return root->num; }
     
   private:
     Node* root;
@@ -114,7 +116,12 @@ class Abb {
     // Deleta nó de chave x da treap enraizada em u. Devolve a treap resultante. Se a chave não existir na treap, nada acontece 
     Node* _Delete(Node* r, int const t)
     {
-      if(r->left == nullptr && r->right == nullptr) return nullptr;
+      if(r == nullptr) return nullptr; // Árvore vazia
+      if(r->left == nullptr && r->right == nullptr) 
+      {
+        if(r->key == t) return nullptr; // Chave encontrada
+        else return r; // Chave não existe na árvore. Não faz nada
+      }
 
       if(t > r->left->max)
       {
@@ -176,6 +183,7 @@ class Abb {
     // Retorna o número de chaves menores que c na árvore enraizada em r
     int _Count(Node* r, int k)
     {
+      if(r == nullptr) return 0;
       if(r->left == nullptr && r->right == nullptr) return r->key <= k;
       if(r->left->max <= k) return r->left->num + _Count(r->right, k);
       else return _Count(r->left, k);
@@ -225,19 +233,19 @@ class Abb {
 };
 
 // Teste inicial para insert. Parece OK
-void Teste1()
-{
-  Abb a = Abb();
-  int list[] = {5, 9, 14, 16, 20, 40};
-  int size = (int) (sizeof(list) / sizeof(list[0]));
-  for(int i = 0; i < size; i++){
-    a.Insert(list[i], GARBAGE);
-    a.Print();
-    std::cout << "*****************\n";
-  }
-}
-
-// Teste incial para count. Parece OK
+//void Teste1()
+//{
+//  Abb a = Abb();
+//  int list[] = {5, 9, 14, 16, 20, 40};
+//  int size = (int) (sizeof(list) / sizeof(list[0]));
+//  for(int i = 0; i < size; i++){
+//    a.Insert(list[i], GARBAGE);
+//    a.Print();
+//    std::cout << "*****************\n";
+//  }
+//}
+//
+//// Teste incial para count. Parece OK
 void Teste2()
 {
   Abb a = Abb();
@@ -256,24 +264,25 @@ void Teste2()
   std::cout << a.Count(25) << "\n"; // 9
   std::cout << a.Count(40) << "\n"; // 11
   std::cout << a.Count(50) << "\n"; // 12
+  std::cout << a.Count(INFTY) << "\n"; // 12
 }
-
-// Teste inicial para K-th(). Parece OK
-void Teste3()
-{
-  Abb a = Abb();
-  int list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
-  int size = (int) (sizeof(list) / sizeof(list[0]));
-  for(int i = 0; i < size; i++){
-    a.Insert(list[i], GARBAGE);
-  }
-  a.Print();
-
-  for(int i = 1; i <= size; i++){
-    std::cout << a.K(i) << "\n";
-  }
-}
-
+//
+//// Teste inicial para K-th(). Parece OK
+//void Teste3()
+//{
+//  Abb a = Abb();
+//  int list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
+//  int size = (int) (sizeof(list) / sizeof(list[0]));
+//  for(int i = 0; i < size; i++){
+//    a.Insert(list[i], GARBAGE);
+//  }
+//  a.Print();
+//
+//  for(int i = 1; i <= size; i++){
+//    std::cout << a.K(i) << "\n";
+//  }
+//}
+//
 // Boss Fight: Teste para Delete(). Parece OK
 void Teste4()
 {
@@ -288,6 +297,12 @@ void Teste4()
   a.Print();
   std::cout << "*********************\n";
 
+  std::cout << "Deleta chave inexistente\n";
+  a.Delete(202); // Deleta chave que não existe na árvore
+  a.Print();
+  std::cout << "*********************\n";
+
+
   int delete_list[] = {9, 5, 23, 41, 40, 19, 3, 11, 16, 14, 20, 33};
   for(int i = 0; i < size; i++){
     std::cout << "Deleta " << delete_list[i] << "\n";
@@ -295,13 +310,23 @@ void Teste4()
     a.Print();
     std::cout << "*********************\n";
   }
-  a.Print();
+}
+//
+
+
+// Degubar Count: Count(INFTY) para uma árvore com um elemento tá dando pau no teste de fila_retroativa
+void Teste5()
+{
+  Abb a = Abb();
+  a.Insert(10, GARBAGE);
+  std::cout << a.Count(INFTY) << "\n"; // 1
 }
 
 int main()
 {
-  Teste1();
-  Teste2();
-  Teste3();
+  //Teste1();
+  //Teste2();
+  //Teste3();
   Teste4();
+  //Teste5();
 }
