@@ -40,6 +40,8 @@ class Abb {
     //int K(int k){ return _K(root, k); }
 
     int Count(int c) { return _Count(root, c); }
+
+    int K(int k) { return _K(root, k); }
     
     // Remove folha com chave x da treap 
     //void Delete(const int x) { root = _Delete(root, x); }
@@ -190,6 +192,25 @@ class Abb {
       v->right = u;
     }
 
+    // Retorna o número de chaves menores que c na árvore enraizada em r
+    int _Count(Node* r, int k)
+    {
+      if(r->left == nullptr && r->right == nullptr) return r->key <= k;
+      if(r->left->max <= k) return r->left->num + _Count(r->right, k);
+      else return _Count(r->left, k);
+    }
+    
+    // Retorna a k-ésima maior chave da árvore enraizada em r
+    int _K(Node* r, int k)
+    {
+      if(r->left == nullptr && r->right == nullptr) {
+        assert(k == 1);
+        return r->key;
+      }
+
+      if(r->left->num >= k) return _K(r->left, k);
+      else return _K(r->right, k - r->left->num);
+    }
     // Retonar a menor chave da árvore enraizada em u
     //Node* _Min(Node* u) const
     //{
@@ -235,14 +256,46 @@ void Teste1()
   }
 }
 
-// Teste incial para count. 
+// Teste incial para count. Parece OK
 void Teste2()
 {
+  Abb a = Abb();
+  int list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
+  int size = (int) (sizeof(list) / sizeof(list[0]));
+  for(int i = 0; i < size; i++){
+    a.Insert(list[i]);
+  }
+  a.Print();
+  std::cout << a.Count(-10) << "\n"; // 0
+  std::cout << a.Count(0) << "\n"; // 0
+  std::cout << a.Count(2) << "\n"; // 0
+  std::cout << a.Count(5) << "\n"; // 2
+  std::cout << a.Count(10) << "\n"; // 3
+  std::cout << a.Count(22) << "\n"; // 8
+  std::cout << a.Count(25) << "\n"; // 9
+  std::cout << a.Count(40) << "\n"; // 11
+  std::cout << a.Count(50) << "\n"; // 12
+}
 
+// Teste inicial para K-th(). Parece OK
+void Teste3()
+{
+  Abb a = Abb();
+  int list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
+  int size = (int) (sizeof(list) / sizeof(list[0]));
+  for(int i = 0; i < size; i++){
+    a.Insert(list[i]);
+  }
+  a.Print();
+
+  for(int i = 1; i <= size; i++){
+    std::cout << a.K(i) << "\n";
+  }
 }
 
 int main()
 {
   //Teste1();
-  Teste2();
+  //Teste2();
+  Teste3();
 }
