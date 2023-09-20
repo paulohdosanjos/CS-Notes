@@ -19,13 +19,14 @@ class Node {
   public:
     int key;
     int priority;
+    int value;
     int max; // maior chave na subárvore
     int num; // número de elementos na subárvore
 
     Node* left;
     Node* right;
    
-    Node(const int _key, int _priority, int _max, int _num, Node* l, Node* r): key(_key), priority(_priority), max(_max), num(_num), left(l), right(r) {}
+    Node(const int _key, int _priority, int _value, int _max, int _num, Node* l, Node* r): key(_key), priority(_priority), value(_value), max(_max), num(_num), left(l), right(r) {}
 };
 
 class Abb {
@@ -35,7 +36,7 @@ class Abb {
     Abb() {std::srand(5); root = nullptr;}
 
     // Insere folha x na árvore. Caso já exista um nó com essa chave, nada acontece.
-    void Insert(const int x) { root = _Insert(root, x); }
+    void Insert(const int t, const int x) { root = _Insert(root, t, x); }
 
     //int K(int k){ return _K(root, k); }
 
@@ -59,33 +60,33 @@ class Abb {
     Node* root;
  
     // Insere uma nova chave x na árvore enraizada em r
-    Node* _Insert(Node* r, const int x)
+    Node* _Insert(Node* r, const int t, const int x)
     {
-      if(r == nullptr) return new Node(x, -INFTY, x, 1, nullptr, nullptr); // Árvore vazia 
+      if(r == nullptr) return new Node(t, -INFTY, x, t, 1, nullptr, nullptr); // Árvore vazia 
       
       if(r->left == nullptr && r->right == nullptr)
       { 
         // r é folha. Cria novo nó interno pai de r e da nova folha a ser adicionada
-        Node* new_leaf = new Node(x, -INFTY, x, 1, nullptr, nullptr);
+        Node* new_leaf = new Node(t, -INFTY, x, t, 1, nullptr, nullptr);
         Node* new_parent;
-        assert(x != r->key);
+        assert(t != r->key);
 
-        if(x > r->key)
-          new_parent = new Node(GARBAGE, _rand(), x, 2, r, new_leaf); 
+        if(t > r->key)
+          new_parent = new Node(GARBAGE, _rand(), GARBAGE, t, 2, r, new_leaf); 
 
         else
-          new_parent = new Node(GARBAGE, _rand(), r->key, 2, new_leaf, r);
+          new_parent = new Node(GARBAGE, _rand(), GARBAGE, r->key, 2, new_leaf, r);
         
         return new_parent;
       }
 
       // r é nó interno
-      assert(x != r->left->max);
+      assert(t != r->left->max);
       r->num++;
-      r->max = std::max(r->max, x);
-      if(x > r->left->max) 
+      r->max = std::max(r->max, t);
+      if(t > r->left->max) 
       {
-        r->right = _Insert(r->right, x);
+        r->right = _Insert(r->right, t, x);
 
         if(r->right->priority > r->priority)
         {
@@ -97,7 +98,7 @@ class Abb {
      
       else 
       {
-        r->left = _Insert(r->left, x);
+        r->left = _Insert(r->left, t, x);
 
         if(r->left->priority > r->priority)
         {
@@ -111,19 +112,19 @@ class Abb {
     }
     
     // Deleta nó de chave x da treap enraizada em u. Devolve a treap resultante. Se a chave não existir na treap, nada acontece 
-    Node* _Delete(Node* r, int const x)
+    Node* _Delete(Node* r, int const t)
     {
       if(r->left == nullptr && r->right == nullptr) return nullptr;
 
-      if(x > r->left->max)
+      if(t > r->left->max)
       {
-        r->right = _Delete(r->right, x);
+        r->right = _Delete(r->right, t);
         if(r->right == nullptr) return r->left; // Shortcut
       }
 
       else
       {
-        r->left =_Delete(r->left, x); 
+        r->left =_Delete(r->left, t); 
         if(r->left == nullptr) return r->right; // Shortcut
       }
 
@@ -185,7 +186,7 @@ class Abb {
     {
       if(r->left == nullptr && r->right == nullptr) {
         assert(k == 1);
-        return r->key;
+        return r->value;
       }
 
       if(r->left->num >= k) return _K(r->left, k);
@@ -230,7 +231,7 @@ void Teste1()
   int list[] = {5, 9, 14, 16, 20, 40};
   int size = (int) (sizeof(list) / sizeof(list[0]));
   for(int i = 0; i < size; i++){
-    a.Insert(list[i]);
+    a.Insert(list[i], GARBAGE);
     a.Print();
     std::cout << "*****************\n";
   }
@@ -243,7 +244,7 @@ void Teste2()
   int list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
   int size = (int) (sizeof(list) / sizeof(list[0]));
   for(int i = 0; i < size; i++){
-    a.Insert(list[i]);
+    a.Insert(list[i], GARBAGE);
   }
   a.Print();
   std::cout << a.Count(-10) << "\n"; // 0
@@ -264,7 +265,7 @@ void Teste3()
   int list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
   int size = (int) (sizeof(list) / sizeof(list[0]));
   for(int i = 0; i < size; i++){
-    a.Insert(list[i]);
+    a.Insert(list[i], GARBAGE);
   }
   a.Print();
 
@@ -280,7 +281,7 @@ void Teste4()
   int insert_list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
   int size = (int) (sizeof(insert_list) / sizeof(insert_list[0]));
   for(int i = 0; i < size; i++){
-    a.Insert(insert_list[i]);
+    a.Insert(insert_list[i], GARBAGE);
   }
 
   std::cout << "Antes de deletar:\n";
@@ -299,8 +300,8 @@ void Teste4()
 
 int main()
 {
-  //Teste1();
-  //Teste2();
-  //Teste3();
+  Teste1();
+  Teste2();
+  Teste3();
   Teste4();
 }
