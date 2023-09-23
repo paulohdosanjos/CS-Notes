@@ -48,7 +48,7 @@ class Abb {
     //int K(int k) { return _K(root, k); }
     
     // Remove folha com chave x da árvore 
-//    void Delete(const int t) { root = _Delete(root, t); }
+    void Delete(const int t) { root = _Delete(root, t); }
 
     // Verifica se folha com chave x está na árvore
     //bool Search(int x) const { return _Search(root, x); }
@@ -125,32 +125,34 @@ class Abb {
     return r;
     }
     
-    // Deleta nó de chave x da treap enraizada em u. Devolve a treap resultante. Se a chave não existir na treap, nada acontece 
-//    Node* _Delete(Node* r, int const t)
-//    {
-//      if(r == nullptr) return nullptr; // Árvore vazia
-//      if(r->left == nullptr && r->right == nullptr) 
-//      {
-//        if(r->key == t) return nullptr; // Chave encontrada
-//        else return r; // Chave não existe na árvore. Não faz nada
-//      }
-//
-//      if(t > r->left->max)
-//      {
-//        r->right = _Delete(r->right, t);
-//        if(r->right == nullptr) return r->left; // Shortcut
-//      }
-//
-//      else
-//      {
-//        r->left =_Delete(r->left, t); 
-//        if(r->left == nullptr) return r->right; // Shortcut
-//      }
-//
-//      r->num--;
-//      r->max = std::max(r->left->max, r->right->max);
-//      return r;
-//    }
+    // Deleta folha de chave t da árvore enraizada em u. Devolve a treap resultante. Se a chave não existir, nada acontece 
+    Node* _Delete(Node* r, int const t)
+    {
+      if(r == nullptr) return nullptr; // Árvore vazia
+      if(r->left == nullptr && r->right == nullptr) 
+      {
+        if(r->key == t) return nullptr; // Chave encontrada
+        else return r; // Chave não existe na árvore. Não faz nada
+      }
+
+      if(t > r->left->max)
+      {
+        r->right = _Delete(r->right, t);
+        if(r->right == nullptr) return r->left; // Shortcut
+      }
+
+      else
+      {
+        r->left =_Delete(r->left, t); 
+        if(r->left == nullptr) return r->right; // Shortcut
+      }
+
+      r->max = std::max(r->left->max, r->right->max);
+      r->sum = r->left->sum + r->right->sum;
+      r->smax = std::max(r->right->smax, r->right->sum + r->left->smax);
+
+      return r;
+    }
 
     // v é o pai e u é o filho
     void RotateLeft(Node* v, Node* u)
@@ -248,8 +250,10 @@ class Abb {
       _Print(u->left, i + 4); 
       std::string space (i, ' '); 
       std::cout << space;
-      std::cout << u->key << " " << u->priority << " " << u->max << " " << u->sum << " " << u->smax << "\n";
-      _Print(u->right, i + 3);
+      //std::cout << u->key << " " << u->priority << " " << u->max << " " << u->sum << " " << u->smax << "\n";
+      if(u->left == nullptr && u->right == nullptr) std::cout << (u->operation == 1 ? "push(" + std::to_string(u->value) + ")" : "pop()") << "\n";
+      else std::cout << u->sum << " " << u->smax << "\n";
+      _Print(u->right, i + 4);
     }
 
 };
@@ -269,87 +273,36 @@ void Teste1()
   a.Print();
 }
 
-//// Teste incial para count. Parece OK
-//void Teste2()
-//{
-//  Abb a = Abb();
-//  int list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
-//  int size = (int) (sizeof(list) / sizeof(list[0]));
-//  for(int i = 0; i < size; i++){
-//    a.Insert(list[i], GARBAGE);
-//  }
-//  a.Print();
-//  std::cout << a.Count(-10) << "\n"; // 0
-//  std::cout << a.Count(0) << "\n"; // 0
-//  std::cout << a.Count(2) << "\n"; // 0
-//  std::cout << a.Count(5) << "\n"; // 2
-//  std::cout << a.Count(10) << "\n"; // 3
-//  std::cout << a.Count(22) << "\n"; // 8
-//  std::cout << a.Count(25) << "\n"; // 9
-//  std::cout << a.Count(40) << "\n"; // 11
-//  std::cout << a.Count(50) << "\n"; // 12
-//  std::cout << a.Count(INFTY) << "\n"; // 12
-//}
-////
-////// Teste inicial para K-th(). Parece OK
-////void Teste3()
-////{
-////  Abb a = Abb();
-////  int list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
-////  int size = (int) (sizeof(list) / sizeof(list[0]));
-////  for(int i = 0; i < size; i++){
-////    a.Insert(list[i], GARBAGE);
-////  }
-////  a.Print();
-////
-////  for(int i = 1; i <= size; i++){
-////    std::cout << a.K(i) << "\n";
-////  }
-////}
-////
-//// Boss Fight: Teste para Delete(). Parece OK
-//void Teste4()
-//{
-//  Abb a = Abb();
-//  int insert_list[] = {5, 9, 16, 20, 40, 33, 3, 11, 23, 14, 41, 19};
-//  int size = (int) (sizeof(insert_list) / sizeof(insert_list[0]));
-//  for(int i = 0; i < size; i++){
-//    a.Insert(insert_list[i], GARBAGE);
-//  }
-//
-//  std::cout << "Antes de deletar:\n";
-//  a.Print();
-//  std::cout << "*********************\n";
-//
-//  std::cout << "Deleta chave inexistente\n";
-//  a.Delete(202); // Deleta chave que não existe na árvore
-//  a.Print();
-//  std::cout << "*********************\n";
-//
-//
-//  int delete_list[] = {9, 5, 23, 41, 40, 19, 3, 11, 16, 14, 20, 33};
-//  for(int i = 0; i < size; i++){
-//    std::cout << "Deleta " << delete_list[i] << "\n";
-//    a.Delete(delete_list[i]);
-//    a.Print();
-//    std::cout << "*********************\n";
-//  }
-//}
-////
-//
-//
-//// Degubar Count: Count(INFTY) para uma árvore com um elemento tá dando pau no teste de fila_retroativa
-//void Teste5()
-//{
-//  Abb a = Abb();
-//  a.Insert(10, GARBAGE);
-//  std::cout << a.Count(INFTY) << "\n"; // 1
-//}
+// Teste inicial para delete. Parece OK
+void Teste2()
+{
+  Abb a = Abb();
+  a.Insert(1, 1, 1); // push(1)
+  a.Insert(2, 1, 2); // push(2)
+  a.Insert(3, -1, GARBAGE); // pop()
+  a.Insert(4, 1, 3); // push(3)
+  a.Insert(5, -1, GARBAGE); // pop()
+  a.Insert(6, 1, 4); // push(4)
+  a.Insert(7, 1, 5); // push(5)
+  a.Insert(8, -1, GARBAGE); // pop()
+  std::cout << "Antes de deletar:\n";
+  a.Print();
+  std::cout << "******************\n";
+
+  int delete_list[] = {2, 5, 7, 1, 3, 6, 8, 4};
+  int size = (int) (sizeof(delete_list) / sizeof(delete_list[0]));
+  for(int i = 0; i < size; i ++){
+    std::cout << "Deleta " << delete_list[i] << "\n";
+    a.Delete(delete_list[i]);
+    a.Print();
+    std::cout << "******************\n";
+  }
+}
 
 int main()
 {
-  Teste1();
-  //Teste2();
+  //Teste1();
+  Teste2();
   //Teste3();
   //Teste4();
   //Teste5();
