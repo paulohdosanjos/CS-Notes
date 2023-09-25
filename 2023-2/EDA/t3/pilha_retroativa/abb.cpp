@@ -42,18 +42,21 @@ class Abb {
     // Insere folha de operação op (valor x caso seja push) na árvore, no instante t. Caso já exista um nó com essa chave, nada acontece.
     void Insert(const int t, const int op, const int x) { root = _Insert(root, t, op, x); }
 
-    //int Count(int c) { return _Count(root, c); }
-
-    //int K(int k) { return _K(root, k); }
-    
     // Remove folha com chave x da árvore 
     void Delete(const int t) { root = _Delete(root, t); }
-
-    // Verifica se folha com chave x está na árvore
-    //bool Search(int x) const { return _Search(root, x); }
     
-    // Retorna a menor folha da árvore
-    //int Min() const { return _Min(root)->key; }
+    int Sum(const int t) { return _Sum(root, t); }
+
+    // Retorna a soma dos créditos das folhas com chave <= t na árvore enraizada em r
+    int _Sum(Node* r, const int t)
+    {
+      if(r->left == nullptr && r->right == nullptr){
+         return r->operation;
+      } 
+
+      if(t > r->left->max) return r->left->sum + _Sum(r->right, t);
+      else return _Sum(r->left, t);
+    }
 
     std::pair<int, Node*> _K(Node* r, const int t, const int k)
     {
@@ -509,11 +512,11 @@ void Teste5()
 }
 
 
-int main()
-{
-  //Teste1();
-  //Teste2();
-  //Teste3();
-  //Teste4();
-  Teste5();
-}
+//int main()
+//{
+//  //Teste1();
+//  //Teste2();
+//  //Teste3();
+//  //Teste4();
+//  Teste5();
+//}
