@@ -1,12 +1,8 @@
-// Tarefa t3 - Abb com suporte a Sum e Top
+// Tarefa t3 - Abb com suporte a K-th() e Top()
 // Paulo Henrique Albuquerque
 // 12542251
 
 #include <iostream>
-#include <string>
-#include <sstream>
-#include <vector>
-#include <assert.h>
 #include <utility>
 
 
@@ -23,7 +19,7 @@ class Node {
     int value;
     int operation; // push = +1 e pop = -1
     int max; // maior chave na subárvore
-    int smax; // maior sufixo na árvore
+    int smax; // maior sufixo na subárvore
     int sum; // soma de créditos na subárvore
 
 
@@ -39,14 +35,40 @@ class Abb {
     
     Abb() {std::srand(5); root = nullptr;}
 
-    // Insere folha de operação op (valor x caso seja push) na árvore, no instante t. Caso já exista um nó com essa chave, nada acontece.
+    // Insere folha de operação op (de valor x caso seja push) na árvore no instante t. 
     void Insert(const int t, const int op, const int x) { root = _Insert(root, t, op, x); }
 
-    // Remove folha com chave x da árvore 
+    // Remove folha com chave t da árvore 
     void Delete(const int t) { root = _Delete(root, t); }
     
+    // Retorna a soma dos "créditos das folhas com chaves <= t"
     int Sum(const int t) { return _Sum(root, t); }
 
+    // Retorna k-ésima elemento da pilha do instante t
+    int K(const int t, const int k)
+    {
+      std::pair p = _FindSubtree(root, t, k);
+      return _K(p.second, p.first);
+    }
+
+    // Retorna o elemento do topo da pilha do instante t
+    int Top(const int t){ return K(t, 1); }
+
+    // Imprime a árvore. Para depuração
+    void Print() const { _Print(root, 0); }
+
+  private:
+    Node* root;
+
+    // Acha t' na subárvore r.
+    int _K(Node* r, int k)
+    {
+      if(r->right == nullptr && r->left == nullptr) return r->value;
+      if(r->right->smax >= k){
+        return _K(r->right, k);
+      }
+      else return _K(r->left, k - r->right->sum);
+    }
     // Retorna a soma dos créditos das folhas com chave <= t na árvore enraizada em r
     int _Sum(Node* r, const int t)
     {
@@ -58,11 +80,11 @@ class Abb {
       else return _Sum(r->left, t);
     }
 
-    std::pair<int, Node*> _K(Node* r, const int t, const int k)
+    // Retorna subárvore que contém t'
+    std::pair<int, Node*> _FindSubtree(Node* r, const int t, const int k)
     {
       if(r->left == nullptr && r->right == nullptr) // Folha
       {
-        //if(r->key != t) return std::make_pair(1, nullptr);
         if(r->operation == 1) return std::make_pair(k-1, (k-1 == 0 ? r : nullptr));
         else return std::make_pair(2 + k-1, nullptr);
 
@@ -73,7 +95,7 @@ class Abb {
       std::pair<int, Node*> p;
       if(t > r->left->max)
       { 
-        p = _K(r->right, t, k);
+        p = _FindSubtree(r->right, t, k);
         if(p.second == nullptr) // Ainda não achou
         { 
           if(r->left->smax >= p.first){ // Achei
@@ -84,70 +106,8 @@ class Abb {
         else // Achei a subárvore, retorna lá pra cima
          return p; 
       }
-      else return _K(r->left, t, k);
+      else return _FindSubtree(r->left, t, k);
     }
-
-    int K(const int t, const int k)
-    {
-      std::pair p = _K(root, t, k);
-      return _After(p.second, p.first);
-    }
-
-    int Top(const int t)
-    {
-      std::pair p = _Top(root, t);
-      //std::cout << "k = " << p.first << " nó = " << p.second->priority << "\n";
-      return _After(p.second, p.first); 
-    }
-
-    int _After(Node* r, int k)
-    {
-      if(r->right == nullptr && r->left == nullptr) return r->value;
-      if(r->right->smax >= k){
-        return _After(r->right, k);
-      }
-      else return _After(r->left, k - r->right->sum);
-    }
-
-    // Retorna em qual subárvore está t'. Se uma chamada retorna null, ela sinaliza para a chamada de cima que ainda não encontrou tal sub-árvore
-    std::pair<int, Node*> _Top(Node* r, const int t)
-    {
-      if(r->left == nullptr && r->right == nullptr) // Folha
-      {
-        //if(r->key != t) return std::make_pair(1, nullptr);
-        if(r->operation == 1) return std::make_pair(0, r);
-        else return std::make_pair(2, nullptr);
-
-      }
-
-      // Nó interno
-
-      std::pair<int, Node*> p;
-      if(t > r->left->max)
-      { 
-        p = _Top(r->right, t);
-        if(p.second == nullptr) // Ainda não achou
-        { 
-          if(r->left->smax >= p.first){ // Achei
-            return std::make_pair(p.first, r->left);
-          }
-          else return std::make_pair(p.first - r->left->sum, nullptr);
-        }
-        else // Achei a subárvore, retorna lá pra cima
-         return p; 
-      }
-      else return _Top(r->left, t);
-    }
-
-
-    // Imprime a árvore 
-    void Print() const { _Print(root, 0); }
-
-    //int Size() const { return root->num; }
-    
-  private:
-    Node* root;
- 
     // Insere uma nova chave x na árvore enraizada em r
     Node* _Insert(Node* r, const int t, const int op, const int x)
     {
@@ -158,7 +118,6 @@ class Abb {
         // r é folha. Cria novo nó interno pai de r e da nova folha a ser adicionada
         Node* new_leaf = new Node(t, -INFTY, x, op, t, (op == -1 ? 0 : 1), op, nullptr, nullptr);
         Node* new_parent;
-        assert(t != r->key);
 
         if(t > r->key){
           int smax = std::max(std::max(0, op), op + r->operation); // Máximo entre os três sufixos possivéis
@@ -173,7 +132,6 @@ class Abb {
       }
 
       // r é nó interno
-      assert(t != r->left->max);
       r->max = std::max(r->max, t);
       if(t > r->left->max) 
       {
@@ -208,7 +166,7 @@ class Abb {
     return r;
     }
     
-    // Deleta folha de chave t da árvore enraizada em u. Devolve a treap resultante. Se a chave não existir, nada acontece 
+    // Deleta folha de chave t da árvore enraizada em u. Devolve a árvore resultante.
     Node* _Delete(Node* r, int const t)
     {
       if(r == nullptr) return nullptr; // Árvore vazia
@@ -240,7 +198,7 @@ class Abb {
     // v é o pai e u é o filho
     void RotateLeft(Node* v, Node* u)
     {
-      // Como as rotações só acontecem entre nós internos, todos os campos estão devidamente inicializados nesse ponto
+      // Como as rotações só acontecem nos nós internos, todos os campos estão devidamente inicializados nesse ponto
       int new_v_max = std::max(u->left->max, v->left->max);
       int new_v_sum = u->left->sum + v->left->sum;
       int new_v_smax = std::max(u->left->smax, u->left->sum + v->left->smax); 
@@ -287,45 +245,6 @@ class Abb {
       v->right = u;
     }
 
-    // Retorna o número de chaves menores que c na árvore enraizada em r
-//    int _Count(Node* r, int k)
-//    {
-//      if(r == nullptr) return 0;
-//      if(r->left == nullptr && r->right == nullptr) return r->key <= k;
-//      if(r->left->max <= k) return r->left->num + _Count(r->right, k);
-//      else return _Count(r->left, k);
-//    }
-//    
-//    // Retorna a k-ésima maior chave da árvore enraizada em r
-//    int _K(Node* r, int k)
-//    {
-//      if(r->left == nullptr && r->right == nullptr) {
-//        assert(k == 1);
-//        return r->value;
-//      }
-//
-//      if(r->left->num >= k) return _K(r->left, k);
-//      else return _K(r->right, k - r->left->num);
-//    }
-    // Retonar a menor chave da árvore enraizada em u
-    //Node* _Min(Node* u) const
-    //{
-    //  if(u == nullptr) return nullptr; // Entra somente quando a árvore está vazia
-    //  if(u->left != nullptr) return _Min(u->left);
-    //  else return u;
-    //}
-
-
-    //// Verifica se a chave x está presente na árvore enraizada em r.
-    //bool _Search(const Node* const r, const int x) const
-    //{
-    //  if(r == nullptr) return false;
-
-    //  if(x == r->key) return true;
-    //  else if(x < r->key) return _Search(r->left, x);
-    //  else return _Search(r->right, x);
-    //}
-
     // Imprime nó u depois de i espaços na saída padrão
     void _Print(Node* u, int i) const
     {
@@ -333,7 +252,6 @@ class Abb {
       _Print(u->left, i + 4); 
       std::string space (i, ' '); 
       std::cout << space;
-      //std::cout << u->key << " " << u->priority << " " << u->max << " " << u->sum << " " << u->smax << "\n";
       if(u->left == nullptr && u->right == nullptr) std::cout << (u->operation == 1 ? "push(" + std::to_string(u->value) + ")" : "pop()") << "\n";
       else std::cout << u->sum << " " << u->smax << " " << u->priority<< "\n";
       _Print(u->right, i + 4);

@@ -1,4 +1,9 @@
+// Tarefa t3 - Pilha retroativa 
+// Paulo Henrique Albuquerque
+// 12542251
+
 #include <iostream>
+#include <sstream>
 
 #include "abb.cpp"
 
