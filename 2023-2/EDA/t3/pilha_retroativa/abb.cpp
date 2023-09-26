@@ -8,11 +8,11 @@
 
 #define MAX_PRIORITY 1001
 #define INFTY 12345
-#define GARBAGE -42
+#define GARBAGE_VALUE -42
+#define SEED 5
 
 bool verbose;
-
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
 
 #if DEBUG_MODE
 #define DEBUG(x) if(verbose) std::cout << x
@@ -43,9 +43,9 @@ class Abb {
 
   public:
     
-    Abb() {std::srand(5); root = nullptr;}
+    Abb() {std::srand(SEED); root = nullptr;}
 
-    // Insere folha de operação op (de valor x caso seja push) na árvore no instante t. 
+    // Insere folha de operação op (de valor x para pushs) na árvore no instante t. 
     void Insert(const int t, const int op, const int x) { root = _Insert(root, t, op, x); }
 
     // Remove folha com chave t da árvore 
@@ -64,18 +64,18 @@ class Abb {
     // Retorna o elemento do topo da pilha do instante t
     int Top(const int t){ return K(t, 1); }
 
-    // Imprime a árvore. Para depuração
+    // Imprime a árvore deitada. Para depuração
     void Print() const { _Print(root, 0); }
 
   private:
     Node* root;
 
-    // Acha t' na subárvore r. Retorna o push em questão
+    // Acha valor do "k-ésimo" push() mais à direita da árvore enraizada em r. Pressupõe que tal push() exista em r
     int _K(Node* r, int k)
     {
-      if(r->right == nullptr && r->left == nullptr) return r->value; // Achei
+      if(r->right == nullptr && r->left == nullptr) return r->value; // Cheguei numa folha: a lógica da função impõe que esse nó é o push() com o valor desejado.
 
-      if(r->right->smax >= k){ // Tento ir para a direita
+      if(r->right->smax >= k){ // Tento ir sempre primeiro para a direita
         return _K(r->right, k);
       }
       else return _K(r->left, k - r->right->sum);
@@ -93,7 +93,7 @@ class Abb {
       else return _Sum(r->left, t);
     }
 
-    // Acha subárvore que contém t'.
+    // Acha e retorna subárvore que contém o "push certo". Retorna par (k, p) conforme dica do fórum
     std::pair<int, Node*> _FindSubtree(Node* r, const int t, const int k)
     {
       if(r->left == nullptr && r->right == nullptr) // Folha
@@ -115,12 +115,12 @@ class Abb {
         p = _FindSubtree(r->right, t, k);
         if(p.second == nullptr) // Ainda não achei
         { 
-          if(r->left->smax >= p.first){ // Achei
+          if(r->left->smax >= p.first){ // Achei agora
             return std::make_pair(p.first, r->left);
           }
           else return std::make_pair(p.first - r->left->sum, nullptr);
         }
-        else // Achei a subárvore, retorna para cima
+        else // Já achei a subárvore, retorna para cima
          return p; 
       }
       else return _FindSubtree(r->left, t, k);
@@ -141,13 +141,13 @@ class Abb {
         if(t > r->key)
         {
           int smax = std::max(std::max(0, op), op + r->operation); // Máximo entre os três sufixos possivéis
-          new_parent = new Node(GARBAGE, _rand(), GARBAGE, GARBAGE, t, smax, op + r->operation, r, new_leaf); 
+          new_parent = new Node(GARBAGE_VALUE, _rand(), GARBAGE_VALUE, GARBAGE_VALUE, t, smax, op + r->operation, r, new_leaf); 
         }
 
         else 
         {
           int smax = std::max(std::max(0, r->operation), op + r->operation); // Máximo entre os três sufixos possivéis
-          new_parent = new Node(GARBAGE, _rand(), GARBAGE, GARBAGE, r->key, smax, op + r->operation, new_leaf, r);
+          new_parent = new Node(GARBAGE_VALUE, _rand(), GARBAGE_VALUE, GARBAGE_VALUE, r->key, smax, op + r->operation, new_leaf, r);
         }
 
         DEBUG("Prioridade do novo nó : ");
@@ -231,7 +231,7 @@ class Abb {
     // v é o pai e u é o filho
     void RotateLeft(Node* v, Node* u)
     {
-      // Como as rotações só acontecem nos nós internos, todos os campos estão devidamente inicializados nesse ponto
+      // Como as rotações só acontecem entre nós internos, todos os campos estão devidamente inicializados nesse ponto
       int new_v_max = std::max(u->left->max, v->left->max);
       int new_v_sum = u->left->sum + v->left->sum;
       int new_v_smax = std::max(u->left->smax, u->left->sum + v->left->smax); 
@@ -278,7 +278,7 @@ class Abb {
       v->right = u;
     }
 
-    // Imprime nó u depois de i espaços na saída padrão
+    // Imprime árvore enraizada em u deitada, após i espaços em branco 
     void _Print(Node* u, int i) const
     {
       if(u == nullptr) return;
@@ -291,274 +291,3 @@ class Abb {
     }
 
 };
-
-// Teste inicial para insert. Usa o exemplo de árvore dos slides. A priori, parece OK
-void Teste1()
-{
-  Abb a = Abb();
-  a.Insert(1, 1, 1); // push(1)
-  a.Insert(2, 1, 2); // push(2)
-  a.Insert(3, -1, GARBAGE); // pop()
-  a.Insert(4, 1, 3); // push(3)
-  a.Insert(5, -1, GARBAGE); // pop()
-  a.Insert(6, 1, 4); // push(4)
-  a.Insert(7, 1, 5); // push(5)
-  a.Insert(8, -1, GARBAGE); // pop()
-  a.Print();
-}
-
-// Teste inicial para delete. Parece OK
-void Teste2()
-{
-  Abb a = Abb();
-  a.Insert(1, 1, 1); // push(1)
-  a.Insert(2, 1, 2); // push(2)
-  a.Insert(3, -1, GARBAGE); // pop()
-  a.Insert(4, 1, 3); // push(3)
-  a.Insert(5, -1, GARBAGE); // pop()
-  a.Insert(6, 1, 4); // push(4)
-  a.Insert(7, 1, 5); // push(5)
-  a.Insert(8, -1, GARBAGE); // pop()
-  std::cout << "Antes de deletar:\n";
-  a.Print();
-  std::cout << "******************\n";
-
-  int delete_list[] = {2, 5, 7, 1, 3, 6, 8, 4};
-  int size = (int) (sizeof(delete_list) / sizeof(delete_list[0]));
-  for(int i = 0; i < size; i ++){
-    std::cout << "Deleta " << delete_list[i] << "\n";
-    a.Delete(delete_list[i]);
-    a.Print();
-    std::cout << "******************\n";
-  }
-}
-
-// Teste inicial para Sum. Parece OK
-//void Teste3()
-//{
-//  Abb a = Abb();
-//  a.Insert(1, 1, 1); // push(1)
-//  a.Insert(2, 1, 2); // push(2)
-//  a.Insert(3, -1, GARBAGE); // pop()
-//  a.Insert(4, 1, 3); // push(3)
-//  a.Insert(5, -1, GARBAGE); // pop()
-//  a.Insert(6, 1, 4); // push(4)
-//  a.Insert(7, 1, 5); // push(5)
-//  a.Insert(8, -1, GARBAGE); // pop()
-//
-//  std::cout << a.Sum(1) << "\n"; // 1
-//  std::cout << a.Sum(2) << "\n"; // 2
-//  std::cout << a.Sum(3) << "\n"; // 1
-//  std::cout << a.Sum(4) << "\n"; // 2
-//  std::cout << a.Sum(5) << "\n"; // 1
-//  std::cout << a.Sum(6) << "\n"; // 2
-//  std::cout << a.Sum(7) << "\n"; // 3
-//  std::cout << a.Sum(8) << "\n"; // 2
-//}
-
-// Teste inicial para Top. Parece OK
-void Teste4()
-{
-  Abb a = Abb();
-  a.Insert(1, 1, 1); // push(1)
-  a.Insert(2, 1, 5); // push(5)
-  a.Insert(3, -1, GARBAGE); // pop()
-  a.Insert(4, 1, 6); // push(6)
-  a.Insert(5, -1, GARBAGE); // pop()
-  a.Insert(6, 1, 0); // push(0)
-  a.Insert(7, 1, 2); // push(2)
-  a.Insert(8, -1, GARBAGE); // pop()
-  a.Insert(9, -1, GARBAGE); // pop()
-  a.Insert(10, 1, 3); // push(3)
-  a.Insert(11, 1, 10); // push(10)
-  a.Insert(12, 1, 7); // push(7)
-  a.Insert(13, -1, GARBAGE); // pop()
-  a.Print();
-
-  std::cout << a.Top(1) << "\n"; // 1
-  std::cout << a.Top(2) << "\n"; // 5
-  std::cout << a.Top(3) << "\n"; // 1
-  std::cout << a.Top(4) << "\n"; // 6
-  std::cout << a.Top(5) << "\n"; // 1 
-  std::cout << a.Top(6) << "\n"; // 0
-  std::cout << a.Top(7) << "\n"; // 2
-  std::cout << a.Top(8) << "\n"; // 0
-  std::cout << a.Top(9) << "\n"; // 1
-  std::cout << a.Top(10) << "\n"; // 3
-  std::cout << a.Top(11) << "\n"; // 10
-  std::cout << a.Top(12) << "\n"; // 7
-  std::cout << a.Top(13) << "\n"; // 10
-  std::cout << a.Top(14) << "\n"; // 10
-  std::cout << a.Top(15) << "\n"; // 10
-}
-
-// Teste inicial para K-th(). Parece OK
-void Teste5()
-{
-  Abb a = Abb();
-  a.Insert(1, 1, 1); // push(1)
-  a.Insert(2, 1, 5); // push(5)
-  a.Insert(3, -1, GARBAGE); // pop()
-  a.Insert(4, 1, 6); // push(6)
-  a.Insert(5, -1, GARBAGE); // pop()
-  a.Insert(6, 1, 0); // push(0)
-  a.Insert(7, 1, 2); // push(2)
-  a.Insert(8, -1, GARBAGE); // pop()
-  a.Insert(9, -1, GARBAGE); // pop()
-  a.Insert(10, 1, 3); // push(3)
-  a.Insert(11, 1, 10); // push(10)
-  a.Insert(12, 1, 7); // push(7)
-  a.Insert(13, -1, GARBAGE); // pop()
-  a.Print();
-
-  std::cout << a.K(1, 1) << "\n"; // 1
-
-  std::cout << a.K(2, 1) << "\n"; // 5
-  std::cout << a.K(2, 2) << "\n"; // 1
-
-  std::cout << a.K(3, 1) << "\n"; // 1
-
-  std::cout << a.K(4, 1) << "\n"; // 6
-  std::cout << a.K(4, 2) << "\n"; // 1
-
-  std::cout << a.K(5, 1) << "\n"; // 1
-
-  std::cout << a.K(6, 1) << "\n"; // 0
-  std::cout << a.K(6, 2) << "\n"; // 1
-
-  
-  std::cout << a.K(7, 1) << "\n"; // 2
-  std::cout << a.K(7, 2) << "\n"; // 0
-  std::cout << a.K(7, 3) << "\n"; // 1
-
-  
-  std::cout << a.K(8, 1) << "\n"; // 0
-  std::cout << a.K(8, 2) << "\n"; // 1
-
-  
-  std::cout << a.K(10, 1) << "\n"; // 3
-  std::cout << a.K(10, 2) << "\n"; // 1
-
-
-  std::cout << a.K(11, 1) << "\n"; // 10
-  std::cout << a.K(11, 2) << "\n"; // 3
-  std::cout << a.K(11, 3) << "\n"; // 1
-
-
-  std::cout << a.K(12, 1) << "\n"; // 7
-  std::cout << a.K(12, 2) << "\n"; // 10
-  std::cout << a.K(12, 3) << "\n"; // 3
-  std::cout << a.K(12, 4) << "\n"; // 1
-
-  std::cout << a.K(13, 1) << "\n"; // 10
-  std::cout << a.K(13, 2) << "\n"; // 3
-  std::cout << a.K(13, 3) << "\n"; // 1
-
-  std::cout << a.K(14, 1) << "\n"; // 10
-  std::cout << a.K(14, 2) << "\n"; // 3
-  std::cout << a.K(14, 3) << "\n"; // 1
-
-}
-
-// Teste para repurar input1.txt
-void Teste6()
-{
-  Abb a = Abb();
-  a.Insert(1, 1, 2);
-  a.Insert(6, 1, 3);
-  a.Insert(7, 1, 5);
-  a.Insert(8, 1, 5);
-  a.Insert(12, 1, 6);
-  a.Insert(14, 1, 7);
-
-  a.Print();
-  std::cout << a.Sum(9) << "\n"; // 4
-  std::cout << a.Top(9) << "\n"; // 5
-}
-
-// Segundo teste para depurar input2.txt
-void Teste7(){
-  Abb a = Abb();
-  a.Insert(1, 1, 2);
-  a.Insert(6, 1, 3);
-  a.Insert(7, 1, 5);
-  a.Insert(8, 1, 5);
-  a.Insert(12, 1, 6);
-  a.Insert(14, 1, 7);
-
-  a.Print();
-  std::cout << "*******************\n";
-
-  a.Insert(3, -1, GARBAGE);
-  a.Insert(10, -1, GARBAGE);
-
-  a.Print();
-  std::cout << "*******************\n";
-
-  a.Delete(14);
-  a.Delete(12);
-  a.Print();
-  std::cout << "*******************\n";
-
-  std::cout << a.Sum(14) << "\n"; // 2
-  std::cout << a.K(14, 1) << "\n"; // 5
-  std::cout << a.K(14, 2) << "\n"; // 3
-
-}
-
-void Teste8()
-{
-  Abb a = Abb();
-  a.Insert(1, 1, 5);
-  a.Insert(8, 1, 10);
-  a.Insert(5, 1, 3);
-  a.Insert(6, 1, 2);
-  a.Insert(4, -1, GARBAGE);
-  a.Insert(11, -1, GARBAGE);
-
-  a.Print();
-  std::cout << "****************\n";
-
-  a.Insert(3, 1, 12);
-  a.Print();
-  std::cout << "****************\n";
-
-  std::cout << a.K(12, 1) << "\n"; // 2
-  std::cout << a.K(12, 2) << "\n"; // 3
-  std::cout << a.K(12, 3) << "\n"; // 5
-}
-
-
-void Teste9()
-{
-  verbose = false;
-  Abb a = Abb();
-  a.Insert(1, 1, 5);
-  a.Insert(8, 1, 10);
-  a.Insert(5, 1, 3);
-  a.Insert(6, 1, 2);
-  a.Insert(4, -1, GARBAGE);
-  a.Insert(11, -1, GARBAGE);
-
-  a.Print();
-  std::cout << "****************\n";
-
-  verbose = true;
-  a.Insert(3, 1, 12);
-  a.Print();
-  std::cout << "****************\n";
-
-}
-
-//int main()
-//{
-//  //Teste1();
-//  //Teste2();
-//  //Teste3();
-//  //Teste4();
-//  //Teste5();
-//  //Teste6();
-//  //Teste7();
-//  //Teste8();
-//  Teste9();
-//}

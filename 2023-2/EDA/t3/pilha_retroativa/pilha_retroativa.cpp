@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "abb.cpp"
+#include "abb.cpp" // A árvore está implementada nesse arquivo
 
 class RetroStack
 {
@@ -14,7 +14,7 @@ class RetroStack
 
     void InsertPush(const int t, const int x) { a.Insert(t, 1, x); }
 
-    void InsertPop(const int t) { a.Insert(t, -1, GARBAGE); }
+    void InsertPop(const int t) { a.Insert(t, -1, GARBAGE_VALUE); }
 
     void Delete(const int t) { a.Delete(t); }
 
