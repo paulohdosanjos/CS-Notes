@@ -41,10 +41,10 @@ class Abb {
     // Remove folha com chave t da árvore 
     void Delete(const int t) { root = _Delete(root, t); }
     
-    // Retorna a soma dos "créditos das folhas com chaves <= t"
+    // Retorna a soma dos "créditos" das folhas com chave <= t
     int Sum(const int t) { return _Sum(root, t); }
 
-    // Retorna k-ésima elemento da pilha do instante t
+    // Retorna k-ésimo elemento da pilha do instante t
     int K(const int t, const int k)
     {
       std::pair p = _FindSubtree(root, t, k);
@@ -60,16 +60,18 @@ class Abb {
   private:
     Node* root;
 
-    // Acha t' na subárvore r.
+    // Acha t' na subárvore r. Retorna o push em questão
     int _K(Node* r, int k)
     {
-      if(r->right == nullptr && r->left == nullptr) return r->value;
-      if(r->right->smax >= k){
+      if(r->right == nullptr && r->left == nullptr) return r->value; // Achei
+
+      if(r->right->smax >= k){ // Tento ir para a direita
         return _K(r->right, k);
       }
       else return _K(r->left, k - r->right->sum);
     }
-    // Retorna a soma dos créditos das folhas com chave <= t na árvore enraizada em r
+
+    // Retorna a soma dos "créditos" das folhas com chave <= t na árvore enraizada em r
     int _Sum(Node* r, const int t)
     {
       if(r->left == nullptr && r->right == nullptr){
@@ -80,34 +82,35 @@ class Abb {
       else return _Sum(r->left, t);
     }
 
-    // Retorna subárvore que contém t'
+    // Acha subárvore que contém t'.
     std::pair<int, Node*> _FindSubtree(Node* r, const int t, const int k)
     {
       if(r->left == nullptr && r->right == nullptr) // Folha
       {
+        // Ajusta k de acordo com a operação da folha
         if(r->operation == 1) return std::make_pair(k-1, (k-1 == 0 ? r : nullptr));
         else return std::make_pair(2 + k-1, nullptr);
 
       }
 
       // Nó interno
-
       std::pair<int, Node*> p;
       if(t > r->left->max)
       { 
         p = _FindSubtree(r->right, t, k);
-        if(p.second == nullptr) // Ainda não achou
+        if(p.second == nullptr) // Ainda não achei
         { 
           if(r->left->smax >= p.first){ // Achei
             return std::make_pair(p.first, r->left);
           }
           else return std::make_pair(p.first - r->left->sum, nullptr);
         }
-        else // Achei a subárvore, retorna lá pra cima
+        else // Achei a subárvore, retorna para cima
          return p; 
       }
       else return _FindSubtree(r->left, t, k);
     }
+
     // Insere uma nova chave x na árvore enraizada em r
     Node* _Insert(Node* r, const int t, const int op, const int x)
     {
@@ -123,6 +126,7 @@ class Abb {
           int smax = std::max(std::max(0, op), op + r->operation); // Máximo entre os três sufixos possivéis
           new_parent = new Node(GARBAGE, _rand(), GARBAGE, GARBAGE, t, smax, op + r->sum, r, new_leaf); 
         }
+
         else {
           int smax = std::max(std::max(0, r->operation), op + r->operation); // Máximo entre os três sufixos possivéis
           new_parent = new Node(GARBAGE, _rand(), GARBAGE, GARBAGE, r->key, smax, op + r->sum, new_leaf, r);
@@ -140,6 +144,7 @@ class Abb {
         r->sum = r->left->sum + r->right->sum;
         r->smax = std::max(r->right->smax, r->right->sum + r->left->smax);
 
+        // Rotação da treap
         if(r->right->priority > r->priority)
         {
           Node* child = r->right;
@@ -155,6 +160,7 @@ class Abb {
         r->sum = r->left->sum + r->right->sum;
         r->smax = std::max(r->right->smax, r->right->sum + r->left->smax);
 
+        // Rotação da treap
         if(r->left->priority > r->priority)
         {
           Node* child = r->left;
@@ -166,7 +172,7 @@ class Abb {
     return r;
     }
     
-    // Deleta folha de chave t da árvore enraizada em u. Devolve a árvore resultante.
+    // Deleta folha de chave t da árvore enraizada em r. Devolve a árvore resultante.
     Node* _Delete(Node* r, int const t)
     {
       if(r == nullptr) return nullptr; // Árvore vazia
@@ -188,6 +194,7 @@ class Abb {
         if(r->left == nullptr) return r->right; // Shortcut
       }
 
+      // Atualiza campos
       r->max = std::max(r->left->max, r->right->max);
       r->sum = r->left->sum + r->right->sum;
       r->smax = std::max(r->right->smax, r->right->sum + r->left->smax);
