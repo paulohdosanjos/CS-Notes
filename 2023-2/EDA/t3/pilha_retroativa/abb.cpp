@@ -10,6 +10,16 @@
 #define INFTY 12345
 #define GARBAGE -42
 
+bool verbose;
+
+#define DEBUG_MODE 1
+
+#if DEBUG_MODE
+#define DEBUG(x) if(verbose) std::cout << x
+#else
+#define DEBUG(x)
+#endif
+
 #define _rand() (std::rand() % MAX_PRIORITY)
 
 class Node {
@@ -75,7 +85,8 @@ class Abb {
     int _Sum(Node* r, const int t)
     {
       if(r->left == nullptr && r->right == nullptr){
-         return r->operation;
+        if(t >= r->key) return r->operation;
+        else return 0;
       } 
 
       if(t > r->left->max) return r->left->sum + _Sum(r->right, t);
@@ -88,9 +99,13 @@ class Abb {
       if(r->left == nullptr && r->right == nullptr) // Folha
       {
         // Ajusta k de acordo com a operação da folha
-        if(r->operation == 1) return std::make_pair(k-1, (k-1 == 0 ? r : nullptr));
-        else return std::make_pair(2 + k-1, nullptr);
+        if(t >= r->key)
+        {
+          if(r->operation == 1) return std::make_pair(k-1, (k-1 == 0 ? r : nullptr));
+          else return std::make_pair(2 + k-1, nullptr);
+        }
 
+        else return std::make_pair(k, nullptr);
       }
 
       // Nó interno
@@ -118,27 +133,35 @@ class Abb {
       
       if(r->left == nullptr && r->right == nullptr)
       { 
+        DEBUG("Folha. Criando novo nó splitado\n");
         // r é folha. Cria novo nó interno pai de r e da nova folha a ser adicionada
         Node* new_leaf = new Node(t, -INFTY, x, op, t, (op == -1 ? 0 : 1), op, nullptr, nullptr);
         Node* new_parent;
 
-        if(t > r->key){
+        if(t > r->key)
+        {
           int smax = std::max(std::max(0, op), op + r->operation); // Máximo entre os três sufixos possivéis
-          new_parent = new Node(GARBAGE, _rand(), GARBAGE, GARBAGE, t, smax, op + r->sum, r, new_leaf); 
+          new_parent = new Node(GARBAGE, _rand(), GARBAGE, GARBAGE, t, smax, op + r->operation, r, new_leaf); 
         }
 
-        else {
+        else 
+        {
           int smax = std::max(std::max(0, r->operation), op + r->operation); // Máximo entre os três sufixos possivéis
-          new_parent = new Node(GARBAGE, _rand(), GARBAGE, GARBAGE, r->key, smax, op + r->sum, new_leaf, r);
+          new_parent = new Node(GARBAGE, _rand(), GARBAGE, GARBAGE, r->key, smax, op + r->operation, new_leaf, r);
         }
-        
+
+        DEBUG("Prioridade do novo nó : ");
+        DEBUG(new_parent->priority);
+        DEBUG("\n");
         return new_parent;
       }
 
       // r é nó interno
+      DEBUG("Nó interno\n");
       r->max = std::max(r->max, t);
       if(t > r->left->max) 
       {
+        DEBUG("Adicionando à direita\n");
         r->right = _Insert(r->right, t, op, x);
 
         r->sum = r->left->sum + r->right->sum;
@@ -147,6 +170,7 @@ class Abb {
         // Rotação da treap
         if(r->right->priority > r->priority)
         {
+          DEBUG("Rotacionando para a esquerda\n");
           Node* child = r->right;
           RotateLeft(r, child);
           r = child;
@@ -155,6 +179,7 @@ class Abb {
      
       else 
       {
+        DEBUG("Adicionando à esquerda\n");
         r->left = _Insert(r->left, t, op, x);
 
         r->sum = r->left->sum + r->right->sum;
@@ -163,6 +188,7 @@ class Abb {
         // Rotação da treap
         if(r->left->priority > r->priority)
         {
+          DEBUG("Rotacionando para a direita\n");
           Node* child = r->left;
           RotateRight(r, child);
           r = child;
@@ -233,7 +259,7 @@ class Abb {
       // Como as rotações só acontecem entre nós internos, todos os campos estão devidamente inicializados nesse ponto
       int new_u_max = std::max(u->right->max, v->right->max);
       int new_u_sum = u->right->sum + v->right->sum;
-      int new_u_smax = std::max(u->right->smax, u->right->sum + u->left->smax); 
+      int new_u_smax = std::max(u->right->smax, u->right->sum + v->right->smax); 
 
       int new_v_max = u->max;
       int new_v_sum = u->sum;
@@ -432,10 +458,97 @@ void Teste5()
   std::cout << a.K(14, 2) << "\n"; // 3
   std::cout << a.K(14, 3) << "\n"; // 1
 
+}
 
+// Teste para repurar input1.txt
+void Teste6()
+{
+  Abb a = Abb();
+  a.Insert(1, 1, 2);
+  a.Insert(6, 1, 3);
+  a.Insert(7, 1, 5);
+  a.Insert(8, 1, 5);
+  a.Insert(12, 1, 6);
+  a.Insert(14, 1, 7);
+
+  a.Print();
+  std::cout << a.Sum(9) << "\n"; // 4
+  std::cout << a.Top(9) << "\n"; // 5
+}
+
+// Segundo teste para depurar input2.txt
+void Teste7(){
+  Abb a = Abb();
+  a.Insert(1, 1, 2);
+  a.Insert(6, 1, 3);
+  a.Insert(7, 1, 5);
+  a.Insert(8, 1, 5);
+  a.Insert(12, 1, 6);
+  a.Insert(14, 1, 7);
+
+  a.Print();
+  std::cout << "*******************\n";
+
+  a.Insert(3, -1, GARBAGE);
+  a.Insert(10, -1, GARBAGE);
+
+  a.Print();
+  std::cout << "*******************\n";
+
+  a.Delete(14);
+  a.Delete(12);
+  a.Print();
+  std::cout << "*******************\n";
+
+  std::cout << a.Sum(14) << "\n"; // 2
+  std::cout << a.K(14, 1) << "\n"; // 5
+  std::cout << a.K(14, 2) << "\n"; // 3
 
 }
 
+void Teste8()
+{
+  Abb a = Abb();
+  a.Insert(1, 1, 5);
+  a.Insert(8, 1, 10);
+  a.Insert(5, 1, 3);
+  a.Insert(6, 1, 2);
+  a.Insert(4, -1, GARBAGE);
+  a.Insert(11, -1, GARBAGE);
+
+  a.Print();
+  std::cout << "****************\n";
+
+  a.Insert(3, 1, 12);
+  a.Print();
+  std::cout << "****************\n";
+
+  std::cout << a.K(12, 1) << "\n"; // 2
+  std::cout << a.K(12, 2) << "\n"; // 3
+  std::cout << a.K(12, 3) << "\n"; // 5
+}
+
+
+void Teste9()
+{
+  verbose = false;
+  Abb a = Abb();
+  a.Insert(1, 1, 5);
+  a.Insert(8, 1, 10);
+  a.Insert(5, 1, 3);
+  a.Insert(6, 1, 2);
+  a.Insert(4, -1, GARBAGE);
+  a.Insert(11, -1, GARBAGE);
+
+  a.Print();
+  std::cout << "****************\n";
+
+  verbose = true;
+  a.Insert(3, 1, 12);
+  a.Print();
+  std::cout << "****************\n";
+
+}
 
 //int main()
 //{
@@ -443,5 +556,9 @@ void Teste5()
 //  //Teste2();
 //  //Teste3();
 //  //Teste4();
-//  Teste5();
+//  //Teste5();
+//  //Teste6();
+//  //Teste7();
+//  //Teste8();
+//  Teste9();
 //}
