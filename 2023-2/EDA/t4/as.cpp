@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <algorithm>
+#include <sstream> 
 #include <cmath>
 #include <assert.h>
 #include <vector>
@@ -11,7 +12,7 @@
 #define INFTY 12345
 
 bool verbose = true;
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
 
 #if DEBUG_MODE
 #define DEBUG(x) if(verbose) std::cout << x 
@@ -38,52 +39,62 @@ class As {
 
     As(std::vector<std::pair<int, int>> S)
     { 
-      int n = S.size();
-      DEBUG("n = ");
-      DEBUG(n);
+      int num_segs = S.size();
+      DEBUG("num_segs = ");
+      DEBUG(num_segs);
       DEBUG("\n");
-      int e[2*n+2];
-      e[0] = -INFTY;
-      e[2*n+1] = +INFTY;
 
-      int k = 1;
-      for(int i = 0; i < n; i++){
-        e[k] = S[i].first;
-        e[k+1] = S[i].second;
-        k += 2;
-      } 
+      std::vector<int> e; e.push_back(-INFTY);
+      for(int i = 0; i < num_segs; i++){
+        e.push_back(S[i].first);
+        e.push_back(S[i].second);
+      }
+      e.push_back(+INFTY);
 
       // Antes de ordenar
       DEBUG("e: ");
-      for(int i = 0; i < 2*n+2; i++) {
+      for(int i = 0; i < e.size(); i++) {
         DEBUG(e[i]);
         DEBUG(" ");
       }
       DEBUG("\n");
 
-      std::sort(e, e + 2*n + 2);
+      std::sort(e.begin(), e.end());
+
       // Depois de ordenar
       DEBUG("e: ");
-      for(int i = 0; i < 2*n+2; i++) {
+      for(int i = 0; i < e.size(); i++) {
         DEBUG(e[i]);
         DEBUG(" ");
       }
       DEBUG("\n");
 
-      int height = std::floor(std::log2(4*n+1)) + 1;
+      e.erase( unique( e.begin(), e.end() ), e.end() );
+      // Depois de remover duplicatas
+      DEBUG("e: ");
+      for(int i = 0; i < e.size(); i++) {
+        DEBUG(e[i]);
+        DEBUG(" ");
+      }
+      DEBUG("\n");
+
+
+      int k = e.size() - 2; // Número de elementos distintos no conjunto e, tirando os extremos
+      int num_leafs = 2*k + 1;
+      int height = std::ceil(std::log2(num_leafs));
 
       DEBUG("height = ");
       DEBUG(height);
       DEBUG("\n");
 
-      std::pair<Node*, int> p = Build(root, height, 0, e, n, height); 
+      std::pair<Node*, int> p = Build(root, height, 0, e); 
       DEBUG("deu bom");
       DEBUG("\n");
       root = p.first; 
-      assert(p.second == 4*n + 1);
+      //assert(p.second == 4*num_segs + 1);
 
       // Insere intervalos
-      for(int i = 0; i < n; i++) Insert(root, S, i);
+      for(int i = 0; i < num_segs; i++) Insert(root, S, i);
     }
 
     void Insert(Node* r, std::vector<std::pair<int,int>> S, int i)
@@ -106,10 +117,10 @@ class As {
      if(l_left_open && r_right_open) return vl >= ur || vr <= ul;
      if(l_left_open && !r_right_open) return vl >= ur || vr < ul;
      if(!l_left_open && r_right_open) return vl > ur || vr <= ul;
-     if(!l_left_open && !r_right_open) return vl > ur || vr < ul;
+     else return vl > ur || vr < ul;
     }
 
-    std::pair<Node*, int> Build(Node* r, int height, int i, int e[], int n, int h)
+    std::pair<Node*, int> Build(Node* r, int height, int i, std::vector<int> e)
     {
       if(height != 0) // Nó interno ou folha "superior"
       { 
@@ -117,10 +128,10 @@ class As {
         DEBUG("\n");
         r = new Node();
 
-        std::pair<Node*, int> pl = Build(r->left, height - 1, i, e, n, h);
+        std::pair<Node*, int> pl = Build(r->left, height - 1, i, e);
         r->left = pl.first;
 
-        std::pair<Node*, int> pr = Build(r->right, height - 1, i + pl.second, e, n, h);
+        std::pair<Node*, int> pr = Build(r->right, height - 1, i + pl.second, e);
         r->right = pr.first;
 
         if(pl.second + pr.second == 0) // Folha "superior"
@@ -151,7 +162,11 @@ class As {
       {
         DEBUG("Folha");
         DEBUG("\n");
-        int x = 8*n + 2 - (1 << h);  // Quantidade máxima de folhas no último nível
+        int num_leafs = 2*(e.size() - 2) + 1;
+        int h = std::ceil(std::log2(num_leafs)); 
+        int x = 2*num_leafs - (1 << h); // Quantidade máxima de folhas no último nível
+
+        //int x = 8*n + 2 - (1 << h);    
         if(i >= x) return std::make_pair(nullptr, 0);
         r = new Node();
         if(i % 2 == 0)
@@ -179,7 +194,44 @@ class As {
     // Imprime a árvore deitada. Para depuração
     void Print() const { _Print(root, 0); }
 
+    // Imprime lista com os índices dos segmentos que contém x
+    void Segments(int x)
+    {
+      std::vector<int> ans = std::vector<int>();
+      _Segments(root, x, ans);
+      DEBUG("deu certo\n");
+      DEBUG(ans.size());
+      DEBUG("\n");
+      if(ans.size() == 0) std::cout << "nenhum segmento\n";
+      else{
+        for(int i = 0; i < ans.size(); i++) std::cout << ans[i] + 1 << " ";
+        std::cout << "\n";
+      }
+    }
+
   private:
+
+    void _Segments(Node* r, int x, std::vector<int>& ans)
+    {
+      DEBUG("adiciona ");
+      for(int i = 0; i < r->seg_list.size(); i++) {
+        DEBUG(r->seg_list[i]);
+        DEBUG(" ");
+        ans.push_back(r->seg_list[i]);
+      }
+      DEBUG("\n");
+
+      if(r->left == nullptr) return;
+
+      if(!Disjoint(x, x, r->left->l, r->left->left_open, r->left->r, r->left->right_open)) {
+        DEBUG("indo para a esquerda\n");
+        _Segments(r->left, x, ans);
+      }
+      else {
+        DEBUG("indo para a direita\n");
+        _Segments(r->right, x, ans);
+      }
+    }
 
     // Imprime árvore enraizada em u deitada, após i espaços em branco 
     void _Print(Node* u, int i) const
@@ -188,7 +240,9 @@ class As {
       _Print(u->left, i + 4); 
       std::string space (i, ' '); 
       std::cout << space;
-      std::cout << (u->left_open ? "(" : "[") << std::to_string(u->l) << "," << std::to_string(u->r) << (u->right_open ? ")" : "]") << "\n";
+      std::cout << (u->left_open ? "(" : "[") << (u->l == -INFTY ? "-inf" : std::to_string(u->l)) << "," << (u->r == INFTY ? "inf": std::to_string(u->r)) << (u->right_open ? ")" : "]");
+      for(int i = 0; i < u->seg_list.size(); i++) std::cout << " " << u->seg_list[i] + 1;
+      std::cout << "\n";
       _Print(u->right, i + 4);
     }
 
@@ -210,6 +264,7 @@ class As {
     Node* root;
 };
 
+// Teste inicial
 void Teste1()
 {
   int n;
@@ -225,9 +280,50 @@ void Teste1()
 
   As a = As(v);
   a.Print();
+  verbose = false;
+  a.Segments(1);
+  a.Segments(2);
+  a.Segments(3);
+  a.Segments(4);
+  a.Segments(5);
+  a.Segments(6);
+  a.Segments(7);
+  a.Segments(8);
+  
 }
 
+void Teste2()
+{
+  int n;
+  std::cin >> n;
+  std::vector<std::pair<int,int>> v;
+
+  for(int i = 0; i < n; i++)
+  {
+    int l,r;
+    std::cin >> l >> r;
+    v.push_back(std::make_pair(l,r));
+  }
+
+  As a = As(v);
+
+  for(std::string line; std::getline(std::cin, line) ; ) {
+    int opt, x;
+    std::istringstream iss = std::istringstream(line);
+    iss >> opt >> x;
+
+    switch (opt) {
+      case 1:
+        a.Segments(x);
+        break;
+      case 2:
+        a.Print();
+        break;
+    }
+  }
+}
 int main()
 {
-  Teste1();
+  //Teste1();
+  Teste2();
 }
