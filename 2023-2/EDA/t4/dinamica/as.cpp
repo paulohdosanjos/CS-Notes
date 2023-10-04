@@ -11,7 +11,7 @@
 
 #define INFTY 123456
 
-typedef std::tuple<int,int,int> seg;
+typedef std::tuple<int,int,int> seg; // Cada segmento é uma tupla (n, l, r). Onde n é um rótulo numérico para o segmento e [l, r] é o intervalo correspondente ao segmento
 
 class Node {
   public:
@@ -22,8 +22,7 @@ class Node {
     bool right_open; // l, r) 
     Node* left;
     Node* right;
-    std::vector<int> seg_list; 
-
+    std::vector<int> seg_list; // Lista que guarda rótulos de segmentos
 };
 
 class As {
@@ -36,15 +35,16 @@ class As {
       S = _S;
       int num_segs = S.size();
 
-      // Cónstroi array de intervalos elementares
-      std::vector<int> e; e.push_back(-INFTY);
+      // Constrói array de intervalos elementares
+      std::vector<int> e; 
+      e.push_back(-INFTY);
       for(int i = 0; i < num_segs; i++){
         e.push_back(std::get<1>(S[i]));
         e.push_back(std::get<2>(S[i]));
       }
       e.push_back(+INFTY);
 
-      std::sort(e.begin(), e.end());
+      std::sort(e.begin(), e.end()); // Ordena
       e.erase( unique( e.begin(), e.end() ), e.end() ); // Remove duplicatas
 
       int k = e.size() - 2; // Número de elementos distintos no array, tirando os extremos
@@ -52,7 +52,7 @@ class As {
                                //
       int height = std::ceil(std::log2(num_leafs)); // Altura da árvore
 
-      root = _Build(root, height, 0, e).first; 
+      root = _BuildTree(root, height, 0, e).first; 
 
       // Insere intervalos um a um
       for(int i = 0; i < S.size(); i++) _Insert(root, S[i]);
@@ -61,7 +61,7 @@ class As {
         // Imprime a árvore deitada.
     void Print() const { _Print(root, 0); }
 
-    // Retorna lista com os índices dos segmentos que contém x
+    // Retorna lista com os rótulos dos segmentos que contêm x
     std::vector<int> Segments(int x)
     {
       std::vector<int> ans = std::vector<int>();
@@ -69,24 +69,30 @@ class As {
       return ans;
     }
 
+    // Retorna lista de segmentos. Usada pela árvore dinâmica
+    std::vector<seg> GetS() { return S; }
+
   private:
     
-    // Insere segmento s nas listas de segmentos dos nós da árvore enraizada em r
+    // Insere o segmento s nas listas de segmentos dos nós da árvore enraizada em r
     void _Insert(Node* r, seg s)
     {
       // O intervalo está contido em Si ? 
       if(std::get<1>(s) <= r->l && std::get<2>(s) >= r->r)
       {
-        // Adiciona na lista e para
+        // Adiciona rótulo do segmento na lista e para
         r->seg_list.push_back(std::get<0>(s));
         return;
       }
 
       // Nunca entro nesses ifs no caso r = folha. Então, sem segfault 
-      // Caso o filho esquerdo tenha interseção com Si, insiro nele
-      if(!(Disjoint(std::get<1>(s), std::get<2>(s), r->left->l, r->left->left_open, r->left->r, r->left->right_open))) _Insert(r->left, s);
+      // Caso o filho esquerdo tenha interseção com s, insiro nele
+      if(!(Disjoint(std::get<1>(s), std::get<2>(s), r->left->l, r->left->left_open, r->left->r, r->left->right_open))) 
+        _Insert(r->left, s);
+
       // Mesma coisa para o filho direito
-      if(!(Disjoint(std::get<1>(s), std::get<2>(s), r->right->l, r->right->left_open, r->right->r, r->right->right_open))) _Insert(r->right, s);
+      if(!(Disjoint(std::get<1>(s), std::get<2>(s), r->right->l, r->right->left_open, r->right->r, r->right->right_open))) 
+        _Insert(r->right, s);
     }
 
     // Verifica se os intervalos [ul,ur], [? vl, vr ]? são disjuntos
@@ -98,7 +104,7 @@ class As {
      else return vl > ur || vr < ul;
     }
 
-    // Função recursiva para construção da árvore de segmentos. height é a altura da árvore alvo (constante). i é a quantidade de folhas já adicionadas e e[] é o vetor de intervalos elementares. Retorna a árvore resultante e a quantidade de folhas adicionadas no processo.
+    // Função recursiva para construção da árvore de segmentos. height é a altura do nó r. i é a quantidade de folhas já adicionadas e e[] é o vetor de intervalos elementares. Retorna a árvore resultante e a quantidade de folhas adicionadas no processo.
     std::pair<Node*, int> _BuildTree(Node* r, int height, int i, std::vector<int> e)
     {
       if(height != 0) // Nó interno ou folha de nível "superior"
@@ -162,13 +168,14 @@ class As {
       for(int i = 0; i < r->seg_list.size(); i++) 
         ans.push_back(r->seg_list[i]);
 
-      // Caso seja folha, nada a fazer mais
+      // Caso seja folha, nada a fazer 
       if(r->left == nullptr) return;
 
       // Desço no caminho a procura de x
       if(!Disjoint(x, x, r->left->l, r->left->left_open, r->left->r, r->left->right_open)) {
         _Segments(r->left, x, ans);
       }
+
       else {
         _Segments(r->right, x, ans);
       }
@@ -210,35 +217,3 @@ class As {
     Node* root;
     std::vector<seg> S;
 };
-
-
-//int main()
-//{
-//  int n;
-//  std::cin >> n;
-//  std::vector<seg> v;
-//
-//  for(int i = 0; i < n; i++)
-//  {
-//    int l,r;
-//    std::cin >> l >> r;
-//    v.push_back(std::make_tuple(i+1,l,r));
-//  }
-//
-//  As a = As(v);
-//
-//  for(std::string line; std::getline(std::cin, line) ; ) {
-//    int opt, x;
-//    std::istringstream iss = std::istringstream(line);
-//    iss >> opt >> x;
-//
-//    switch (opt) {
-//      case 1:
-//        a.Segments(x);
-//        break;
-//      case 2:
-//        a.Print();
-//        break;
-//    }
-//  }
-//}
