@@ -6,7 +6,7 @@
 #include <map>
 
 
-#define DEBUG_MODE_2 1
+#define DEBUG_MODE_2 0
 #if DEBUG_MODE_2
 #define DEBUG2(x) std::cout << x
 #else
@@ -40,7 +40,7 @@ class KinHeap {
       // Adiciona elemento id no MaxHeap H
       H.push_back(id);
       int i = H.size() - 1;
-      int new_x0 = xnow - v * now; 
+      double new_x0 = xnow - v * now; 
       m[id] = std::make_tuple(new_x0, v, i);
 
       if(i == 1) return; // Raiz
@@ -64,7 +64,7 @@ class KinHeap {
 
     }
 
-    void Advance(const int t)
+    void Advance(const double t)
     {
       int num_it = 0;
       while(Q->Min().second <= t)
@@ -73,8 +73,10 @@ class KinHeap {
         DEBUG2("now = "); DEBUG2(now); DEBUG2("\n");
         Event(Q->Min().first, Q->Min().second);
         DEBUG2("Depois do evento:\n");
-        Print();
-        Q->Print();
+
+        // ****** PARA DEPURAÇÃO
+        //Print();
+        //Q->Print();
 
         num_it++;
         //if(num_it == 1) break;
@@ -82,12 +84,12 @@ class KinHeap {
       now = t;
     }
 
-    void Change(const int id, const int v)
+    void Change(const int id, const double v)
     {
-      int x0 = std::get<0>(m[id]);
-      int v0 = std::get<1>(m[id]);
+      double x0 = std::get<0>(m[id]);
+      double v0 = std::get<1>(m[id]);
       int i = std::get<2>(m[id]);
-      int new_x0 = x0 + now * (v0 - v); 
+      double new_x0 = x0 + now * (v0 - v); 
 
       m[id] = std::make_tuple(new_x0, v, i);
 
@@ -104,15 +106,96 @@ class KinHeap {
     void Print()
     {
       //std::cout << "Representação de árvore: \n";
-      //_PrintTree(0, 1); 
+      _PrintTree(0, 1); 
 
-      std::cout << "H: \n";
-      for(int i = 1; i <= H.size() - 1; i++) std::cout << H[i] << " ";
-      std::cout << "\n";
+      // ****** PARA DEPURAÇÃO ******
+      //std::cout << "H: \n";
+      //for(int i = 1; i <= H.size() - 1; i++) std::cout << H[i] << " ";
+      //std::cout << "\n";
 
       //std::cout << "Mapeamento: \n";
       //for(int i = 2; i <= map.size() - 1; i++) std::cout << "map[" << i << "] = " << map[i] << "\n";
     }
+
+    // Remove elemento id do heap
+    void Delete(int id)
+    {
+      int i = std::get<2>(m[id]);
+      Swap(i, H.size() - 1);
+      H.pop_back();
+
+      id = H[i];
+      f(i);
+      
+      while(Q->Min().second == now)
+      {
+        Event(Q->Min().first, Q->Min().second);
+        
+        int i = std::get<2>(m[id]);
+
+        f(i);
+
+      }
+    }
+
+    // Remove o elemento de maior valor do heap
+    void DeleteMax() 
+    { 
+      Swap(1, H.size() - 1);
+      H.pop_back();
+      
+      int id = H[1];
+      f(1);
+
+      while(Q->Min().second == now)
+      {
+        Event(Q->Min().first, Q->Min().second);
+        
+        int i = std::get<2>(m[id]);
+
+        f(i);
+
+      }
+    }
+
+    // Verifica se algum filho tem valor maior que o elemento em i. Caso tenha, produz um certificado para now
+    void f(int i)
+    {
+      if(2*i > H.size() - 1) // Não tem filho
+      {
+        return;
+      }
+      else if(2*i + 1 > H.size() - 1) // Só tem filho esquerdo
+      {
+        int id = H[i];
+        int child_id = H[2*i];
+        if(Key(id, now) < Key(child_id, now)) Q->Update(2*i, now);
+        else Q->Update(2*i, Validade(2*i));
+      }
+      else // Tem os dois filhos 
+      {
+        int id = H[i];
+        int left_child_id = H[2*i];
+        int right_child_id = H[2*i + 1];
+
+        if(Key(left_child_id, now) > Key(id, now) && Key(left_child_id, now) > Key(right_child_id, now))
+        {
+          Q->Update(2*i, now);
+        }
+        else Q->Update(2*i, Validade(2*i));
+        if(Key(right_child_id, now) > Key(id, now) && Key(right_child_id, now) > Key(left_child_id, now))
+        {
+          Q->Update(2*i + 1, now);
+        }
+        else Q->Update(2*i + 1, Validade(2*i + 1));
+      }
+    }
+
+    //// Remove o elemento id
+    //void Delete(int id)
+    //{
+    //    
+    //}
 
      //private:
 
@@ -265,10 +348,10 @@ class KinHeap {
     //}
 
     // Dado um id de um elemento, calcula a chave no tempo t
-    int Key(int id, int t)
+    double Key(int id, double t)
     {
-      int x0 = std::get<0>(m[id]);
-      int v = std::get<1>(m[id]);
+      double x0 = std::get<0>(m[id]);
+      double v = std::get<1>(m[id]);
       return x0 + v*t;
     }
 
@@ -393,7 +476,7 @@ void Teste()
   KinHeap kh = KinHeap(id, x0, v, n);
 
   for(std::string line; std::getline(std::cin, line) ; ) {
-    int opt, a, b, c; 
+    int opt; double a, b, c; 
     std::istringstream iss = std::istringstream(line);
     iss >> opt >> a >> b >> c;
     switch (opt) {
@@ -410,10 +493,10 @@ void Teste()
         std::cout << kh.Max() << "\n";
         break;
       case 5:
-        //kh.DeleteMax();
+        kh.DeleteMax();
         break;
       case 6:
-        //kh.Delete(a);
+        kh.Delete(a);
         break;
       case 7:
         kh.Print();
@@ -455,13 +538,37 @@ void Teste4()
   std::cout << "Max = " << kh.Max() << "\n";
 }
 
+void Teste5()
+{
+  int id[] = {1, 2, 3, 4, 5};
+  double x0[] = {8, 3, 17, 16, 5};
+  double v[] = {5, 4, -1, 1, 0};
+  int n = (int) (sizeof(id)/sizeof(id[0]));
+  KinHeap kh = KinHeap(id, x0, v, n);
+
+  kh.Print();
+
+  kh.DeleteMax();
+  kh.Print();
+
+  kh.DeleteMax();
+  kh.Print();
+
+  kh.DeleteMax();
+  kh.Print();
+
+  kh.DeleteMax();
+  kh.Print();
+}
+
 int main()
 {
   //Teste1();
   //Teste2();
   //Teste3();
-  Teste4();
-  //Teste();
+  //Teste4();
+  //Teste5();
+  Teste();
 }
 
 //int main(int argc, char** argv) {
