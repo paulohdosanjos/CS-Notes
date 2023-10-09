@@ -3,15 +3,6 @@
 // 12542251
 
 #include "heap.cpp"
-#include <map>
-
-
-#define DEBUG_MODE_2 0
-#if DEBUG_MODE_2
-#define DEBUG2(x) std::cout << x
-#else
-#define DEBUG2(x) 
-#endif
 
 class KinHeap {
   public:
@@ -47,7 +38,9 @@ class KinHeap {
 
       Make_Parent_Certificate(i, true); 
 
-      // Sobe no heap, atualizando certificados afetados. Caso o elemento esteja fora de sua posição, um certificado correspondente é gerado com validade t = now, e a troca é feita agora
+      /* Sobe no heap, atualizando certificados afetados. 
+       Caso o elemento esteja fora de sua posição, um certificado correspondente é gerado com validade t = now, 
+       e a troca é feita agora */
       while(Q->Min().second == now) // Enquanto o elemento está fora de posição
       {
         Event(Q->Min());
@@ -56,25 +49,6 @@ class KinHeap {
         if(i / 2 == 0) break;
 
         Make_Parent_Certificate(i, false);
-      }
-    }
-
-    // Verifica se o valor do elemento em i é maior do que o pai. Caso seja, produz um certificado com validade t = now. Caso contrário, gera um certificado normal
-    void Make_Parent_Certificate (const int i, bool insert)
-    {
-      if(i / 2 == 0) return; // Raiz. Nada a fazer
-      int id = H[i];
-      int parent_id = H[i/2];
-
-      if(Key(id, now) > Key(parent_id, now))
-      {
-        if(insert) Q->Insert(i, now);
-        else Q->Update(i, now);
-      }
-      else
-      {
-        if(insert) Q->Insert(i, Validade(i));
-        else Q->Update(i, Validade(i));
       }
     }
 
@@ -134,7 +108,11 @@ class KinHeap {
     // Remove o elemento de maior valor do heap
     void DeleteMax () { Delete(H[1]); }
 
-    // Verifica se algum filho tem valor maior que o elemento em i. Caso tenha, gera um certificado com validade t = now. Caso contrário, gera certificado nrmal
+  private:
+
+    /* Verifica se algum filho tem valor maior que o elemento em i. 
+     Caso tenha, gera um certificado com validade t = now para que a troca aconteça. 
+     Caso contrário, gera certificado normal */
     void Make_Child_Certificate (const int i)
     {
       if(2*i > H.size() - 1) // Não tem filho
@@ -146,7 +124,7 @@ class KinHeap {
         int id = H[i];
         int left_child_id = H[2*i];
         if(Key(id, now) < Key(left_child_id, now)) Q->Update(2*i, now);
-        else Q->Update(2*i, Validade(2*i));
+        else Q->Update(2*i, Failure_Time(2*i));
       }
       else // Tem os dois filhos 
       {
@@ -154,17 +132,39 @@ class KinHeap {
         int left_child_id = H[2*i];
         int right_child_id = H[2*i + 1];
 
-        if(Key(left_child_id, now) > Key(id, now) && Key(left_child_id, now) > Key(right_child_id, now)) // Filho esquerdo tem maior valor
+        if(Key(left_child_id, now) > Key(id, now) &&
+           Key(left_child_id, now) > Key(right_child_id, now)) // Filho esquerdo tem maior valor
              { Q->Update(2*i, now); }
-        else { Q->Update(2*i, Validade(2*i)); }
+        else { Q->Update(2*i, Failure_Time(2*i)); }
 
-        if(Key(right_child_id, now) > Key(id, now) && Key(right_child_id, now) > Key(left_child_id, now)) // Filho direito tem maior valor
+        if(Key(right_child_id, now) > Key(id, now) &&
+           Key(right_child_id, now) > Key(left_child_id, now)) // Filho direito tem maior valor
              { Q->Update(2*i + 1, now); }
-        else { Q->Update(2*i + 1, Validade(2*i + 1)); }
+        else { Q->Update(2*i + 1, Failure_Time(2*i + 1)); }
       }
     }
 
-    //private:
+
+    /* Verifica se o valor do elemento em i é maior do que o pai. 
+     Caso seja, produz um certificado com validade t = now para que a troca aconteça. 
+     Caso contrário, gera um certificado normal */
+    void Make_Parent_Certificate (const int i, bool insert)
+    {
+      if(i / 2 == 0) return; // Raiz. Nada a fazer
+      int id = H[i];
+      int parent_id = H[i/2];
+
+      if(Key(id, now) > Key(parent_id, now))
+      {
+        if(insert) Q->Insert(i, now);
+        else Q->Update(i, now);
+      }
+      else
+      {
+        if(insert) Q->Insert(i, Failure_Time(i));
+        else Q->Update(i, Failure_Time(i));
+      }
+    }
 
     void _PrintTree (const int s, const int i) 
     {
@@ -183,9 +183,8 @@ class KinHeap {
       _PrintTree(s + 3, 2*i + 1);
     }
 
-
     // Retorna prazo de validade para certificado i
-    double Validade (const int i) 
+    double Failure_Time (const int i) 
     {
       int u = H[i];
       int u_parent = H[i/2];
@@ -198,7 +197,7 @@ class KinHeap {
       if(v_u == v_u_parent) return INFTY;
 
       double t = (x_u - x_u_parent) / (v_u_parent - v_u);
-      if(t < 0) return INFTY;
+      if(t <= now) return INFTY;
       else return t;
     }
     
@@ -233,7 +232,7 @@ class KinHeap {
       int num_cert = H.size() - 2; // num_cert = num_elementos - 1 = H.size() - 1 - 1 = H.size() - 2
 
       for(int cert_id = 2; cert_id <= 2 + num_cert - 1; cert_id++) 
-        Q->Insert(cert_id, Validade(cert_id));
+        Q->Insert(cert_id, Failure_Time(cert_id));
     }
 
     // Atualiza o certificado i
@@ -241,18 +240,7 @@ class KinHeap {
     {
       if(i / 2 == 0) return; // Raiz. Nada a se fazer
 
-      int u = H[i];
-      int u_parent = H[i/2];
-
-      double x_u = std::get<0>(m[u]);
-      double v_u = std::get<1>(m[u]);
-      double x_u_parent = std::get<0>(m[u_parent]);
-      double v_u_parent = std::get<1>(m[u_parent]);
-      
-      double t;
-      if(v_u == v_u_parent) t = INFTY;
-      t = (x_u - x_u_parent) / (v_u_parent - v_u);
-      if(t <= now) t = INFTY;
+      double t = Failure_Time(i);
 
       Q->Update(i, t); // Atualiza certificado no heap de certificados Q
     }
@@ -318,13 +306,14 @@ class KinHeap {
     // Desce o elemento na posição i do vetor H para a sua posição correta no heap cinético
     void Sink (const int i)
     {
-      int current_heap_size = H.size() - 1;
-      if(2*i > H.size() - 1) {
-        return; // Folha ou NULL
+      if(2*i > H.size() - 1) { // Não tem filho
+        return; 
       }
       else if (2*i + 1 > H.size() - 1) // Só tem filho esquerdo
       {
-        if(Key(H[i], now) < Key(H[2*i], now))
+        int id = H[i];
+        int left_child_id = H[2*i];
+        if(Key(id, now) < Key(left_child_id, now))
         {
           Swap(i, 2*i);
           return;
@@ -332,19 +321,21 @@ class KinHeap {
       }
       else // Tem os dois filhos
       {
-        int u = H[i];
-        int left_child = H[2*i];
-        int right_child = H[2*i + 1];
+        int id = H[i];
+        int left_child_id = H[2*i];
+        int right_child_id = H[2*i + 1];
 
-        // Filho esquerda tem a chave maior
-        if(Key(left_child, now) > Key(u, now) && Key(left_child, now) > Key(right_child, now))
+        // Filho esquerdo tem maior valor
+        if(Key(left_child_id, now) > Key(id, now) && 
+           Key(left_child_id, now) > Key(right_child_id, now))
         {
           Swap(i, 2*i);
           Sink(2*i);
         }
 
-        // Filho direito tem a chave maior
-        if(Key(right_child, now) > Key(u, now) && Key(right_child, now) > Key(left_child, now))
+        // Filho direito tem maior valor
+        if(Key(right_child_id, now) > Key(id, now) && 
+           Key(right_child_id, now) > Key(left_child_id, now))
         {
           Swap(i, 2*i + 1);
           Sink(2*i + 1);
@@ -375,7 +366,7 @@ void Teste1()
   std::cout << "Inicialmente:\n";
   kh.Print(); 
   std::cout << "certificados: \n";
-  kh.Q->Print();
+  //kh.Q->Print();
   //std::cout << "(" << kh.Q->Min().first << ", " << kh.Q->Min().second << ")\n";
   std::cout << "Max = " << kh.Max() << "\n";
 
@@ -386,7 +377,7 @@ void Teste1()
 
   kh.Print(); 
   std::cout << "certificados: \n";
-  kh.Q->Print();
+  //kh.Q->Print();
   std::cout << "Max = " << kh.Max() << "\n";
 }
 
@@ -401,7 +392,7 @@ void Teste2()
 
   kh.Print();
   std::cout << "certificados: \n";
-  kh.Q->Print();
+  //kh.Q->Print();
   std::cout << "Max = " << kh.Max() << "\n";
 
   std::cout << "***********************\n";
@@ -410,7 +401,7 @@ void Teste2()
   kh.Advance(t);
   kh.Print();
   std::cout << "certificados: \n";
-  kh.Q->Print();
+  //kh.Q->Print();
   std::cout << "Max = " << kh.Max() << "\n";
 }
 
@@ -483,7 +474,7 @@ void Teste4()
   KinHeap kh = KinHeap(id, x0, v, n);
 
   kh.Print();
-  kh.Q->Print();
+  //kh.Q->Print();
   std::cout << "Max = " << kh.Max() << "\n";
 
   kh.Advance(4);
@@ -523,9 +514,4 @@ int main()
   //Teste5();
   Teste();
 }
-
-//int main(int argc, char** argv) {
-//    ::testing::InitGoogleTest(&argc, argv);
-//    return RUN_ALL_TESTS();
-//}
 
