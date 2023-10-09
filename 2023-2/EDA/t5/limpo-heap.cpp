@@ -21,33 +21,36 @@ class Heap {
     Heap()
     {
       h = std::vector<cert>(); h.push_back(GARBAGE); // Não usamos a primeira posição
-      map = std::vector<int>(); map.push_back(-1); map.push_back(-1); // Não usamos a duas primeiras posições, pois os ids dos certificados começam de 2
+      m = std::map<int, int>(); 
     }
 
     // Constrói heap a partir do vetor de certificados v
     Heap(cert v[], int n)
     {
       h = std::vector<cert>(); h.push_back(GARBAGE);
-      map = std::vector<int>(); map.push_back(-1); map.push_back(-1);
+      m = std::map<int, int>(); 
 
       for(int i = 0; i < n; i++) {
         h.push_back(v[i]);
-        int id = v[i].first;
-        if(id > h.size() - 1) map.push_back(1); // Só adiciona mais uma posição à map[] se id não foi adicionado anteriormente
-        map[id] = h.size() - 1;
+
+        // Atualiza mapeamento
+        int id = v[i].first; 
+        m[id] = h.size() - 1;
       }
 
       for(int i = h.size()/2; i > 0; i--) Sink(i);
     }
 
-    // Insere cerficado (id, t) no heap. Pressupõe que os ids dos certificados são 2, 3, ..., 2 + num_certificados - 1
-    void Insert(const int id, const double t)
+    // Insere cerficado c = (id, t) no heap
+    void Insert(cert c)
     {
+      int id = c.first;
+      double t = c.second;
       h.push_back(std::make_pair(id, t));
-      int current_heap_size = h.size() - 1;
-      if(id > current_heap_size) map.push_back(1); // Só adiciona mais uma posição à map[] se id não foi adicionado anteriormente
-      map[id] = current_heap_size;
-      Swim(current_heap_size);
+
+      m[id] = h.size() - 1;
+
+      Swim(h.size() - 1);
     }
 
     // Remove certificado com menor prioridade do heap
@@ -57,7 +60,7 @@ class Heap {
       Swap(1, h.size() - 1);  // Substitui raiz pelo último elemento
       h.pop_back();
       Sink(1);
-      map[cert_id] = -1;
+      m[cert_id] = -1; // Verificar isso
     }
 
     // Retorna certificado (id, t) com menor t 
@@ -66,9 +69,9 @@ class Heap {
     // Atualiza prioridade do certificado id para new_t
     void Update(const int id, const double new_t)
     {
-      h[map[id]].second = new_t;
-      Sink(map[id]);
-      Swim(map[id]);
+      h[m[id]].second = new_t;
+      Sink(m[id]);
+      Swim(m[id]);
     }
 
     // Imprime representação de árvore do heap, junto com a representação de vetor
@@ -110,8 +113,8 @@ class Heap {
     void Swap(const int i, const int j)
     {
       // Atualiza mapeamentos
-      map[h[i].first] = j;
-      map[h[j].first] = i;
+      m[h[i].first] = j;
+      m[h[j].first] = i;
 
       cert tmp = h[i];
       h[i] = h[j];
@@ -154,8 +157,8 @@ class Heap {
       }
     }
     
-    std::vector<cert> h; // vetor que representa árvore do heap
-    std::vector<int> map; // mapeamento id -> índice em h
+    std::vector<cert> h; // Vetor que representa árvore do heap
+    std::map<int, int> m; // Mapeamento id -> índice em h
 
 };
 
