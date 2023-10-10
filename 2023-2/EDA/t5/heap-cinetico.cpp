@@ -2,164 +2,119 @@
 // Paulo Henrique Albuquerque
 // 12542251
 
-#include "heap.cpp"
-#include <map>
-
-
-#define DEBUG_MODE_2 0
-#if DEBUG_MODE_2
-#define DEBUG2(x) std::cout << x
-#else
-#define DEBUG2(x) 
-#endif
+#include "limpo-heap.cpp"
 
 class KinHeap {
   public:
 
     // Constrói KinHeap vazio
-    KinHeap()
+    KinHeap ()
     {
       now = 0;
-      m = std::map<int, std::tuple<double, double, int>>();
+      M = std::map<int, std::tuple<double, double, int>>();
       H = std::vector<int>(); H.push_back(-1); // Não utilizo primeira posição
       Q = new Heap();
     }
 
     // Constrói KinHeap a partir de valores de entrada
-    KinHeap(int id[], double x0[], double v[], int n)
+    KinHeap (const int id[], const double x0[], const double v[], const int n)
     {
       now = 0;
-      m = std::map<int, std::tuple<double, double, int>>();
-      BuildHeap(id, x0, v, n);
-      BuildQ();
+      M = std::map<int, std::tuple<double, double, int>>();
+      Build_H(id, x0, v, n); // Constrói H
+      Build_Q(); // Constrói Q
     }
 
     // Insere o elemento id, cujo valor atual é xnow com velocidade v
-    void Insert(int id, double xnow, double v)
+    void Insert (const int id, const double xnow, const double v)
     {
       // Adiciona elemento id no MaxHeap H
       H.push_back(id);
       int i = H.size() - 1;
-      double new_x0 = xnow - v * now; 
-      m[id] = std::make_tuple(new_x0, v, i);
+      double new_x0 = xnow - v * now; // Valor do elemento em t = 0 
+      M[id] = std::make_tuple(new_x0, v, i); // Adiciona nova entrada na tabela de símbolos
 
-      if(i == 1) return; // Raiz
+      if(i / 2  == 0) return; // É raiz, nada mais a fazer 
 
-      int parent_id = H[i/2];
-      if(Key(id, now) > Key(parent_id, now)) Q->Insert(i, now);
-      else Q->Insert(i, Validade(i));
+      Make_Parent_Certificate(i, true); 
 
-      while(Q->Min().second == now)
+      /* Sobe no heap, atualizando certificados afetados. 
+       Caso o elemento esteja fora de sua posição, um certificado correspondente é gerado com validade t = now, 
+       e a troca é feita agora */
+      while(Q->Min().second == now) // Enquanto o elemento está fora de posição
       {
-        Event(Q->Min().first, Q->Min().second);
-        
-        int i = std::get<2>(m[id]);
+        Event(Q->Min());
+        int i = std::get<2>(M[id]);
 
         if(i / 2 == 0) break;
 
-        int parent_id = H[i/2];
-        if(Key(id, now) > Key(parent_id, now)) Q->Update(i, now);
-        else Q->Update(i, Validade(i));
+        Make_Parent_Certificate(i, false);
       }
-
     }
 
-    void Advance(const double t)
+    // Avança o tempo para o instante t
+    void Advance (const double t)
     {
-      int num_it = 0;
       while(Q->Min().second <= t)
       {
         now = Q->Min().second;
-        DEBUG2("now = "); DEBUG2(now); DEBUG2("\n");
-        Event(Q->Min().first, Q->Min().second);
-        DEBUG2("Depois do evento:\n");
-
-        // ****** PARA DEPURAÇÃO
-        //Print();
-        //Q->Print();
-
-        num_it++;
-        //if(num_it == 1) break;
+        Event(Q->Min());
       }
       now = t;
     }
 
-    void Change(const int id, const double v)
+    // Muda a velocidade do elemento id para v
+    void Change (const int id, const double v)
     {
-      double x0 = std::get<0>(m[id]);
-      double v0 = std::get<1>(m[id]);
-      int i = std::get<2>(m[id]);
+      // Atualiza tabela de símbolos
+      double x0 = std::get<0>(M[id]);
+      double v0 = std::get<1>(M[id]);
+      int i     = std::get<2>(M[id]);
+
       double new_x0 = x0 + now * (v0 - v); 
+      M[id] = std::make_tuple(new_x0, v, i);
 
-      m[id] = std::make_tuple(new_x0, v, i);
-
-      if(i > 1) UpdateCert(i);
-      if(2*i < H.size()) UpdateCert(2*i);
-      if(2*i + 1 < H.size()) UpdateCert(2*i + 1);
+      if(i > 1) Update_Certificate(i);
+      if(2*i < H.size()) Update_Certificate(2*i);
+      if(2*i + 1 < H.size()) Update_Certificate(2*i + 1);
     }
 
-    // Retorna id do elemento com maior valor
-    int Max() { return H[1]; }
+    // Retorna id do elemento com maior valor no instante atual
+    int Max () const { return H[1]; }
 
-     
-    // Imprime representação de árvore do heap, junto com a representação de vetor
-    void Print()
-    {
-      //std::cout << "Representação de árvore: \n";
-      _PrintTree(0, 1); 
-
-      // ****** PARA DEPURAÇÃO ******
-      //std::cout << "H: \n";
-      //for(int i = 1; i <= H.size() - 1; i++) std::cout << H[i] << " ";
-      //std::cout << "\n";
-
-      //std::cout << "Mapeamento: \n";
-      //for(int i = 2; i <= map.size() - 1; i++) std::cout << "map[" << i << "] = " << map[i] << "\n";
-    }
+    // Imprime representação de árvore do heap 
+    void Print () { _PrintTree(0, 1); }
 
     // Remove elemento id do heap
-    void Delete(int id)
+    void Delete (const int id)
     {
-      int i = std::get<2>(m[id]);
+      int i = std::get<2>(M[id]);
       Swap(i, H.size() - 1);
       H.pop_back();
 
-      id = H[i];
-      f(i);
+      int _id = H[i];
+      Make_Child_Certificate(i);
       
       while(Q->Min().second == now)
       {
-        Event(Q->Min().first, Q->Min().second);
+        Event(Q->Min());
         
-        int i = std::get<2>(m[id]);
+        int i = std::get<2>(M[_id]);
 
-        f(i);
+        Make_Child_Certificate(i);
 
       }
     }
 
     // Remove o elemento de maior valor do heap
-    void DeleteMax() 
-    { 
-      Swap(1, H.size() - 1);
-      H.pop_back();
-      
-      int id = H[1];
-      f(1);
+    void DeleteMax () { Delete(H[1]); }
 
-      while(Q->Min().second == now)
-      {
-        Event(Q->Min().first, Q->Min().second);
-        
-        int i = std::get<2>(m[id]);
+  //private:
 
-        f(i);
-
-      }
-    }
-
-    // Verifica se algum filho tem valor maior que o elemento em i. Caso tenha, produz um certificado para now
-    void f(int i)
+    /* Verifica se algum filho tem valor maior que o elemento em i. 
+     Caso tenha, gera um certificado com validade t = now para que a troca aconteça. 
+     Caso contrário, gera certificado normal */
+    void Make_Child_Certificate (const int i)
     {
       if(2*i > H.size() - 1) // Não tem filho
       {
@@ -168,9 +123,9 @@ class KinHeap {
       else if(2*i + 1 > H.size() - 1) // Só tem filho esquerdo
       {
         int id = H[i];
-        int child_id = H[2*i];
-        if(Key(id, now) < Key(child_id, now)) Q->Update(2*i, now);
-        else Q->Update(2*i, Validade(2*i));
+        int left_child_id = H[2*i];
+        if(Key(id, now) < Key(left_child_id, now)) Q->Update(2*i, now);
+        else Q->Update(2*i, Failure_Time(2*i));
       }
       else // Tem os dois filhos 
       {
@@ -178,28 +133,44 @@ class KinHeap {
         int left_child_id = H[2*i];
         int right_child_id = H[2*i + 1];
 
-        if(Key(left_child_id, now) > Key(id, now) && Key(left_child_id, now) > Key(right_child_id, now))
-        {
-          Q->Update(2*i, now);
-        }
-        else Q->Update(2*i, Validade(2*i));
-        if(Key(right_child_id, now) > Key(id, now) && Key(right_child_id, now) > Key(left_child_id, now))
-        {
-          Q->Update(2*i + 1, now);
-        }
-        else Q->Update(2*i + 1, Validade(2*i + 1));
+        if(Key(left_child_id, now) > Key(id, now) &&
+           Key(left_child_id, now) > Key(right_child_id, now)) // Filho esquerdo tem maior valor
+             { Q->Update(2*i, now); }
+        else { Q->Update(2*i, Failure_Time(2*i)); }
+
+        if(Key(right_child_id, now) > Key(id, now) &&
+           Key(right_child_id, now) > Key(left_child_id, now)) // Filho direito tem maior valor
+             { Q->Update(2*i + 1, now); }
+        else { Q->Update(2*i + 1, Failure_Time(2*i + 1)); }
       }
     }
 
-    //// Remove o elemento id
-    //void Delete(int id)
-    //{
-    //    
-    //}
 
-     //private:
+    /* Verifica se o valor do elemento em i é maior do que o pai. 
+     Caso seja, produz um certificado com validade t = now para que a troca aconteça. 
+     Caso contrário, gera um certificado normal
+     insert = true insere em Q, e insert = false só atualiza
+     */
+     
+    void Make_Parent_Certificate (const int i, bool insert)
+    {
+      if(i / 2 == 0) return; // Raiz. Nada a fazer
+      int id = H[i];
+      int parent_id = H[i/2];
 
-    void _PrintTree(int s, int i)
+      if(Key(id, now) > Key(parent_id, now))
+      {
+        if(insert) Q->Insert(i, now);
+        else Q->Update(i, now);
+      }
+      else
+      {
+        if(insert) Q->Insert(i, Failure_Time(i));
+        else Q->Update(i, Failure_Time(i));
+      }
+    }
+
+    void _PrintTree (const int s, const int i) 
     {
       if(i > H.size() - 1) return;
 
@@ -210,41 +181,38 @@ class KinHeap {
 
       int id = H[i];
       double xnow = Key(id, now);
-      double x0 = std::get<0>(m[id]);
-      double v = std::get<1>(m[id]);
+      double x0 = std::get<0>(M[id]);
+      double v  = std::get<1>(M[id]);
+
       std::cout << xnow << " (" << x0 << " " << v << ")\n";
       _PrintTree(s + 3, 2*i + 1);
     }
 
-
     // Retorna prazo de validade para certificado i
-    double Validade(int i)
+    double Failure_Time (const int i) 
     {
       int u = H[i];
       int u_parent = H[i/2];
 
-      double x_u = std::get<0>(m[u]);
-      double v_u = std::get<1>(m[u]);
-      double x_u_parent = std::get<0>(m[u_parent]);
-      double v_u_parent = std::get<1>(m[u_parent]);
+      double x_u        = std::get<0>(M[u]);
+      double v_u        = std::get<1>(M[u]);
+      double x_u_parent = std::get<0>(M[u_parent]);
+      double v_u_parent = std::get<1>(M[u_parent]);
 
       if(v_u == v_u_parent) return INFTY;
-      //DEBUG2(v_u_parent); DEBUG2("\n");
-      //DEBUG2(v_u); DEBUG2("\n");
-      //DEBUG2(x_u-x_u_parent); DEBUG2("\n");
-      //DEBUG2(v_u_parent - v_u); DEBUG2("\n");
+
       double t = (x_u - x_u_parent) / (v_u_parent - v_u);
-      //DEBUG2("t = "); DEBUG2(t); DEBUG2("\n");
-      if(t < 0) return INFTY;
+      if(t == now && v_u_parent > v_u) t = INFTY; // Já foram trocados
+      if(t < now) return INFTY;
       else return t;
     }
     
-    // Constrói heap cinético a partir da entrada 
-    void BuildHeap(int _id[], double _x0[], double _v[], int n)
+    // Constrói heap cinético a partir de valores de entrada
+    void Build_H (const int _id[], const double _x0[], const double _v[], const int n)
     {
       H.push_back(-1); // Não utilizo primeira posição
     
-      // Copia para H
+      // Copia ids para H
       for(int i = 0; i < n; i++)
       {
         int id = _id[i];
@@ -252,9 +220,11 @@ class KinHeap {
         double v = _v[i];
 
         H.push_back(id);
-        std::get<0>(m[id]) = x0;
-        std::get<1>(m[id]) = v;
-        std::get<2>(m[id]) = H.size() - 1;
+
+        // Atualiza tabela de símbolos
+        std::get<0>(M[id]) = x0;
+        std::get<1>(M[id]) = v;
+        std::get<2>(M[id]) = H.size() - 1;
       }
       
       // Restaura propriedade de heap
@@ -262,60 +232,51 @@ class KinHeap {
     }
 
     // Constrói MinHeap Q de certificados
-    void BuildQ()
+    void Build_Q ()
     {
       Q = new Heap();
-      int num_cert = H.size() - 2;
-      for(int cert_id = 2; cert_id <= 2 + num_cert - 1; cert_id++) // num_cert = num_elementos - 1 = H.size() - 1 - 1 = H.size() - 2
-      {
-        Q->Insert(cert_id, Validade(cert_id));
-      }
+      int num_cert = H.size() - 2; // num_cert = num_elementos - 1 = H.size() - 1 - 1 = H.size() - 2
+
+      for(int cert_id = 2; cert_id <= 2 + num_cert - 1; cert_id++) 
+        Q->Insert(cert_id, Failure_Time(cert_id));
     }
 
     // Atualiza o certificado i
-    void UpdateCert(int i)
+    void Update_Certificate (const int i)
     {
-      DEBUG2("Update("); DEBUG2(i); DEBUG2(")\n");
-      if(i == 1) return;
-      int u = H[i];
-      int u_parent = H[i/2];
+      if(i / 2 == 0) return; // Raiz. Nada a se fazer
 
-      double x_u = std::get<0>(m[u]);
-      double v_u = std::get<1>(m[u]);
-      double x_u_parent = std::get<0>(m[u_parent]);
-      double v_u_parent = std::get<1>(m[u_parent]);
-      
-      double t;
-      if(v_u == v_u_parent) t = INFTY;
-      t = (x_u - x_u_parent) / (v_u_parent - v_u);
-      if(t <= now) t = INFTY;
-      DEBUG2("t = "); DEBUG2(t); DEBUG2("\n");
-      Q->Update(i, t);
+      double t = Failure_Time(i);
+
+      Q->Update(i, t); // Atualiza certificado no heap de certificados Q
     }
 
-    // Certificado (i, t) expirou
-    void Event(int i, double t)
+    // Certificado (i, t) expirado. Troca posição dos elementos em questão e atualiza certificados afetados
+    void Event (const cert c)
     {
-      DEBUG2("Event("); DEBUG2(i); DEBUG2(", "); DEBUG2(t); DEBUG2(")\n");
+      int i = c.first;
+      double t = c.second;
       int id = H[i];
       int parent_id = H[i/2];
-      DEBUG2("id = "); DEBUG2(id); DEBUG2(", parent_id = "); DEBUG2(parent_id); DEBUG2("\n");
 
       Swap(i, i/2);
       
-      if(i > 1) UpdateCert(i/2);
-      UpdateCert(i);
-      if(2*i < H.size()) UpdateCert(2*i);
-      if(2*i + 1 < H.size()) UpdateCert(2*i + 1);
+      if(i > 1) Update_Certificate(i/2);
+
+      Update_Certificate(i);
+
+      if(2*i < H.size()) Update_Certificate(2*i);
+
+      if(2*i + 1 < H.size()) Update_Certificate(2*i + 1);
+
       int s = Sibling(i);
-      DEBUG2("sibling = "); DEBUG2(s); DEBUG2("\n");
-      if(s > 0) UpdateCert(s);
+      if(s > 0) Update_Certificate(s);
     }
 
-    // Retorna índice do irmão do elemento na posição i de H. Retorna 0 se chamado para a raiz ou para uma folha sem irmão
-    int Sibling(int i)
+    // Retorna posíção do irmão do elemento na posição i de H. Retorna 0 se chamado para a raiz ou para uma folha sem irmão
+    int Sibling (const int i) const
     {
-      if(i == 1) return 0; // Raiz não tem irmão
+      if(i / 2 == 0) return 0; // Raiz. Não tem irmão
 
       if(i % 2 == 0) // Elemento na posição i é filho esquerdo
       {
@@ -329,54 +290,36 @@ class KinHeap {
 
     }
 
-    // Sobe elemento na posição i do vetor H para a sua posição correta no heap
-    //void Swim(int i)
-    //{
-    //  if(i/2 < 1) return;
-
-    //  int u_id = H[i];
-    //  int u_parent_id = H[i/2];
-
-    //  int u_key = Key(u_id, now);
-    //  int u_parent_key = Key(u_parent_id, now);
-    //  
-    //  if(u_key > u_parent_key) 
-    //  { 
-    //    Swap(i, i/2); 
-    //    Swim(i/2);
-    //  }
-    //}
-
-    // Dado um id de um elemento, calcula a chave no tempo t
-    double Key(int id, double t)
+    // Dado um id de um elemento, calcula seu valor no tempo t
+    double Key (const int id, const double t) 
     {
-      double x0 = std::get<0>(m[id]);
-      double v = std::get<1>(m[id]);
+      double x0 = std::get<0>(M[id]);
+      double v  = std::get<1>(M[id]);
       return x0 + v*t;
     }
 
-    
-    // Troca de posição os elemetos nos índices i e j em H
-    void Swap(const int i, const int j)
+    // Troca de posição os elemetos nas posições i e j de H
+    void Swap (const int i, const int j)
     {
-      // Atualiza mapeamento de índice
-      int i_id = H[i]; std::get<2>(m[i_id]) = j;
-      int j_id = H[j]; std::get<2>(m[j_id]) = i;
+      // Atualiza mapeamento de posição na tabela de símbolos
+      int i_id = H[i]; std::get<2>(M[i_id]) = j;
+      int j_id = H[j]; std::get<2>(M[j_id]) = i;
 
       H[i] = j_id;
       H[j] = i_id;
     }
 
     // Desce o elemento na posição i do vetor H para a sua posição correta no heap cinético
-    void Sink(int i)
+    void Sink (const int i)
     {
-      int current_heap_size = H.size() - 1;
-      if(2*i > current_heap_size) {
-        return; // Folha ou NULL
+      if(2*i > H.size() - 1) { // Não tem filho
+        return; 
       }
-      else if (2*i + 1 > current_heap_size) // Só tem filho esquerdo
+      else if (2*i + 1 > H.size() - 1) // Só tem filho esquerdo
       {
-        if(Key(H[i], now) < Key(H[2*i], now))
+        int id = H[i];
+        int left_child_id = H[2*i];
+        if(Key(id, now) < Key(left_child_id, now))
         {
           Swap(i, 2*i);
           return;
@@ -384,17 +327,21 @@ class KinHeap {
       }
       else // Tem os dois filhos
       {
-        int u = H[i];
-        int left_child = H[2*i];
-        int right_child = H[2*i + 1];
+        int id = H[i];
+        int left_child_id = H[2*i];
+        int right_child_id = H[2*i + 1];
 
-        if(Key(left_child, now) > Key(u, now) && Key(left_child, now) > Key(right_child, now))
+        // Filho esquerdo tem maior valor
+        if(Key(left_child_id, now) > Key(id, now) && 
+           Key(left_child_id, now) > Key(right_child_id, now))
         {
           Swap(i, 2*i);
           Sink(2*i);
         }
 
-        if(Key(right_child, now) > Key(u, now) && Key(right_child, now) > Key(left_child, now))
+        // Filho direito tem maior valor
+        if(Key(right_child_id, now) > Key(id, now) && 
+           Key(right_child_id, now) > Key(left_child_id, now))
         {
           Swap(i, 2*i + 1);
           Sink(2*i + 1);
@@ -403,8 +350,11 @@ class KinHeap {
     }
    
     std::vector<int> H; // Vetor que representa o heap. Guarda os ids dos elementos
+
     Heap* Q; // MinHeap de certificados
-    std::map<int, std::tuple<double, double, int>> m; // Mapeia ids dos elementos para posição inicial, velocidade e posição no vetor H
+
+    std::map<int, std::tuple<double, double, int>> M; // Mapeia ids dos elementos para posição inicial, velocidade e posição no vetor H
+
     double now; // Instante atual
 };
 
@@ -422,7 +372,7 @@ void Teste1()
   std::cout << "Inicialmente:\n";
   kh.Print(); 
   std::cout << "certificados: \n";
-  kh.Q->Print();
+  //kh.Q->Print();
   //std::cout << "(" << kh.Q->Min().first << ", " << kh.Q->Min().second << ")\n";
   std::cout << "Max = " << kh.Max() << "\n";
 
@@ -433,7 +383,7 @@ void Teste1()
 
   kh.Print(); 
   std::cout << "certificados: \n";
-  kh.Q->Print();
+  //kh.Q->Print();
   std::cout << "Max = " << kh.Max() << "\n";
 }
 
@@ -448,7 +398,7 @@ void Teste2()
 
   kh.Print();
   std::cout << "certificados: \n";
-  kh.Q->Print();
+  //kh.Q->Print();
   std::cout << "Max = " << kh.Max() << "\n";
 
   std::cout << "***********************\n";
@@ -457,7 +407,7 @@ void Teste2()
   kh.Advance(t);
   kh.Print();
   std::cout << "certificados: \n";
-  kh.Q->Print();
+  //kh.Q->Print();
   std::cout << "Max = " << kh.Max() << "\n";
 }
 
@@ -520,20 +470,23 @@ void Teste3()
   kh.Print();
 }
 
-// Desempate. Os três elementos colidem em t = 1.5. Não consegui quebrar ainda
+// Desempate. Os três elementos colidem em t = 1. Parece OK
 void Teste4()
 {
   int id[] = {1, 2, 3};
-  double x0[] = {8, 17, -2.65};
-  double v[] = {5, -1, 12.1};
+  double x0[] = {8, 9, 10};
+  double v[] = {2, 1, 0};
   int n = (int) (sizeof(id)/sizeof(id[0]));
   KinHeap kh = KinHeap(id, x0, v, n);
 
+  std::cout << "Antes da colisão:\n";
   kh.Print();
   kh.Q->Print();
   std::cout << "Max = " << kh.Max() << "\n";
+  std::cout << "********************************************\n";
 
-  kh.Advance(4);
+  std::cout << "Depois da colisão:\n";
+  kh.Advance(2);
   kh.Print();
   std::cout << "Max = " << kh.Max() << "\n";
 }
@@ -566,13 +519,8 @@ int main()
   //Teste1();
   //Teste2();
   //Teste3();
-  //Teste4();
+  Teste4();
   //Teste5();
-  Teste();
+  //Teste();
 }
-
-//int main(int argc, char** argv) {
-//    ::testing::InitGoogleTest(&argc, argv);
-//    return RUN_ALL_TESTS();
-//}
 
