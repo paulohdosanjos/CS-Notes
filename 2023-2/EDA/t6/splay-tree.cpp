@@ -5,7 +5,7 @@
 #include <iostream>
 #include <assert.h>
 
-#define DEBUG_MODE 0
+#define DEBUG_MODE 1
 #if DEBUG_MODE
 #define DEBUGLN(x) std::cout << x << "\n"
 #define DEBUG(x) std::cout << x
@@ -32,7 +32,12 @@ class SplayTree {
 
     SplayTree () { root = nullptr; }
 
-    void Insert (const int x) { root = _Insert(root, nullptr, x); }
+    void Insert (const int x) 
+    { 
+      auto p = _Insert(root, nullptr, x);
+      root = p.first; 
+      root = _Splay(p.second);
+    }
 
     bool Search (const int x) 
     {
@@ -46,8 +51,76 @@ class SplayTree {
       return p.first;
     }
 
+    // Retorna menor chave presente na árvore. Não deve ser chamada para árvore vazia
+    int Min () 
+    { 
+      Node* min_node = _Min(root); 
+      root = _Splay(min_node);
+      return min_node->key;
+    }
+
+    // Remove nó com chave x da treap 
+    void Delete(const int x) 
+    { 
+      DEBUGLN("Delete(" << std::to_string(x) << ")");
+      auto p = _Delete(root, x);
+      DEBUG("Nó mais profundo : "); 
+      DEBUGLN( (p.second == nullptr ? "null" : std::to_string(p.second->key) ) ); 
+      DEBUGLN("************************");
+      root = p.first;
+      root = _Splay(p.second);
+    }
+
+    // Remove nó com chave x na árvore enraizada em r. Retorna a árvore resultante e o nó mais profundo 
+    std::pair<Node*, Node*> _Delete(Node* r, const int x)
+    {
+      std::pair<Node*, Node*> p;
+      if(x > r->key){
+        p = _Delete(r->right, x);
+        r->right = p.first; 
+        if(p.first != nullptr) p.first->parent = r;
+        return std::make_pair(r, p.second); 
+      }
+
+      else if(x < r->key){
+        p = _Delete(r->left, x);
+        r->left = p.first; 
+        if(p.first != nullptr) p.first->parent = r;
+        return std::make_pair(r, p.second); 
+      }
+
+      else // x == r->key
+      { 
+        if(r->left == nullptr){ // Sem filho esquerdo. Faz shortcut. Nó mais profundo alcançado foi o pai de r (talvez seja nulo)
+          return std::make_pair(r->right, r->parent);
+        }
+        else if(r->right == nullptr) // Sem filho direito. Com filho esquerdo
+        {
+          return std::make_pair(r->left, r->parent);
+        }
+        else // Tem os dois filhos
+        { 
+          Node* min_right = _Min(r->right); 
+          r->key = min_right->key;
+          auto p = _Delete(min_right, min_right->key);
+          min_right->parent->left = p.first;
+          if(p.first != nullptr) p.first->parent = min_right->parent;
+          return std::make_pair(r, p.second);
+        }
+      }
+    }
+
+    // Retorna nó com menor chave na árvore enraizada em r
+    Node* _Min(Node* r)
+    {
+      if(r->left != nullptr) return _Min(r->left);
+      else return r;
+    }
+
     Node* _Splay(Node* u)
     {
+      if(u == nullptr) return root; // Caso em que chamamos splay com nullptr, ou seja, o nó de interesse já esta na raiz
+
       while(u->parent != nullptr) {
         _SplayOperation(u);
         //Print();
@@ -220,15 +293,26 @@ class SplayTree {
       _Print(u->right, i + 3);
     }
     
-    // Insere nó com chave x na árvore enraizada em r, onde r_parent é o pai de r
-    Node* _Insert (Node* r, Node* r_parent, const int x)
+    // Insere nó com chave x na árvore enraizada em r, onde r_parent é o pai de r. Devolve no segundo campo o nó mais profundo visitado
+    std::pair<Node*, Node*> _Insert (Node* r, Node* r_parent, const int x)
     {
-      if(r == nullptr) return new Node(x, nullptr, nullptr, r_parent); // Árvore vazia
+      if(r == nullptr) // Árvore vazia
+      {
+        Node* new_leaf = new Node(x, nullptr, nullptr, r_parent);
+        return std::make_pair(new_leaf, new_leaf); 
+      }
 
-    if(x > r->key) r->right = _Insert(r->right, r, x);
-    else if(x < r->key) r->left = _Insert(r->left, r, x);
+    std::pair<Node*, Node*> p;
+    if(x > r->key) {
+      p = _Insert(r->right, r, x);
+      r->right = p.first;
+    }
+    else if(x < r->key) {
+      p = _Insert(r->left, r, x);
+      r->left = p.first;
+    }
 
-    return r;
+    return std::make_pair(r, p.second);
     }
 
     Node* root;
@@ -237,6 +321,7 @@ class SplayTree {
 // Teste inicial para insert. Parece OK
 void Teste1 ()
 {
+  std::cout << "*******************Teste1*******************\n";
   int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
   int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
   SplayTree st = SplayTree();
@@ -248,6 +333,7 @@ void Teste1 ()
 // Teste para primeiro retorno de Search(). Parece OK
 void Teste2 ()
 {
+  std::cout << "*******************Teste2*******************\n";
   int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
   int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
   SplayTree st = SplayTree();
@@ -263,6 +349,7 @@ void Teste2 ()
 // Teste inicial para Splay(). Parece OK
 void Teste3 ()
 {
+  std::cout << "*******************Teste3*******************\n";
   int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
   int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
   SplayTree st = SplayTree();
@@ -280,11 +367,49 @@ void Teste3 ()
   }
 }
 
+// Teste inicial para Min(). Parece OK
+void Teste4 ()
+{
+  int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
+  SplayTree st = SplayTree();
+  for(int i = 0; i < n ; i++) st.Insert(insertion_list[i]);
+
+  st.Print();
+  std::cout << "*****************************\n";
+
+  std::cout << "min = " << st.Min() << "\n";
+  st.Print();
+}
+
+// Teste para Delete()
+void Teste5 ()
+{
+  int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
+  SplayTree st = SplayTree();
+  for(int i = 0; i < n ; i++) st.Insert(insertion_list[i]);
+
+  st.Print();
+  std::cout << "*****************************\n";
+
+  int query_list[] = {7, 8, 1, 6, 14, 4, 13, 3, 10};
+  int m = sizeof(query_list) / sizeof(query_list[0]);
+  for(int i = 0; i < m ; i++) {
+    st.Delete(query_list[i]);
+    st.Print();
+    std::cout << "*****************************\n";
+  }
+}
+
+
 int main()
 {
   //Teste1();
   //Teste2();
-  Teste3();
+  //Teste3();
+  //Teste4();
+  Teste5();
 }
 
 
