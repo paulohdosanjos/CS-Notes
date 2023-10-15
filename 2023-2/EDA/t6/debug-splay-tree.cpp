@@ -4,6 +4,17 @@
 
 #include <iostream>
 #include <sstream>
+#include <assert.h>
+
+#define DEBUG_MODE 0
+#if DEBUG_MODE
+#define DEBUGLN(x) std::cout << x << "\n"
+#define DEBUG(x) std::cout << x
+#else
+#define DEBUGLN(x) 
+#define DEBUG(x) 
+#endif
+
 
 class Node {
   public:
@@ -20,10 +31,8 @@ class SplayTree {
 
   public:
 
-    // Constrói splay tree vazia
     SplayTree () { root = nullptr; }
 
-    // Insere novo nó com chave x na splay tree
     void Insert (const int x) 
     { 
       auto p = _Insert(root, nullptr, x);
@@ -31,15 +40,19 @@ class SplayTree {
       root = _Splay(p.second);
     }
 
-    // Procura por chave x na árvore. Além de retornar o resultado da busca, aciona Splay() para o nó mais profundo atingido durante a busca
     bool Search (const int x) 
     {
-      auto p = _Search(root, nullptr, x);
+      DEBUGLN("Search(" << std::to_string(x) << ")");
+      std::pair<int, Node*> p = _Search(root, nullptr, x);
+      assert(p.first == false || x == p.second->key);
+      DEBUG("Nó mais profundo : "); 
+      DEBUGLN(p.second->key); 
+      DEBUGLN("************************");
       root = _Splay(p.second);
       return p.first;
     }
 
-    // Retorna menor chave presente na árvore e aciona Splay() para o nó correspondente. Não deve ser chamada para árvore vazia
+    // Retorna menor chave presente na árvore. Não deve ser chamada para árvore vazia
     int Min () 
     { 
       Node* min_node = _Min(root); 
@@ -47,15 +60,19 @@ class SplayTree {
       return min_node->key;
     }
 
-    // Remove nó com chave x da árvore e aciona Splay() para o nó corresponde. Não deve ser chamada para x não presente na árvore
+    // Remove nó com chave x da treap 
     void Delete(const int x) 
     { 
+      DEBUGLN("Delete(" << std::to_string(x) << ")");
       auto p = _Delete(root, x);
+      DEBUG("Nó mais profundo : "); 
+      DEBUGLN( (p.second == nullptr ? "null" : std::to_string(p.second->key) ) ); 
+      DEBUGLN("************************");
       root = p.first;
       root = _Splay(p.second);
     }
 
-    // Remove nó com chave x da árvore enraizada em r. Retorna a árvore resultante e o nó mais profundo atingindo durante a remoção 
+    // Remove nó com chave x na árvore enraizada em r. Retorna a árvore resultante e o nó mais profundo 
     std::pair<Node*, Node*> _Delete(Node* r, const int x)
     {
       std::pair<Node*, Node*> p;
@@ -75,16 +92,14 @@ class SplayTree {
 
       else // x == r->key
       { 
-        // Sem filho esquerdo. Faz shortcut. Nó mais profundo alcançado foi o pai de r (possivelmente nulo)
-        if(r->left == nullptr) 
+        if(r->left == nullptr){ // Sem filho esquerdo. Faz shortcut. Nó mais profundo alcançado foi o pai de r (talvez seja nulo)
           return std::make_pair(r->right, r->parent);
-        
-        // Sem filho direito. Com filho esquerdo
-        else if(r->right == nullptr)
+        }
+        else if(r->right == nullptr) // Sem filho direito. Com filho esquerdo
+        {
           return std::make_pair(r->left, r->parent);
-        
-        // r tem os dois filhos
-        else 
+        }
+        else // Tem os dois filhos
         { 
           Node* min_right = _Min(r->right); 
           r->key = min_right->key;
@@ -96,58 +111,72 @@ class SplayTree {
       }
     }
 
-    // Retorna nó com menor chave na árvore enraizada em r. Não deve ser chamada para r == nullptr
+    // Retorna nó com menor chave na árvore enraizada em r
     Node* _Min(Node* r)
     {
       if(r->left != nullptr) return _Min(r->left);
       else return r;
     }
 
-    // Coloca nó u na raiz através de chamadas sucessivas de SplayOperation() nesse nó
     Node* _Splay(Node* u)
     {
-      if(u == nullptr) return root; // Caso em que chamamos splay com nullptr, ou seja, o nó de interesse já está na raiz
+      if(u == nullptr) return root; // Caso em que chamamos splay com nullptr, ou seja, o nó de interesse já esta na raiz
 
-      while(u->parent != nullptr) 
+      while(u->parent != nullptr) {
         _SplayOperation(u);
-
+        //Print();
+        DEBUGLN("************************");
+      }
       return u;
     }
 
+    // Faz splay operation no nó u
     void _SplayOperation(Node* u)
     {
+      assert(u != nullptr);
+
       Node* p = u->parent;
+
       if(p == nullptr) return;
+
       Node* g = p->parent;
 
-      if(g == nullptr) // Rotação simples 
+      if(g == nullptr) // Single rotations
       {
-        if(p->left == u) // u é filho esquerdo. r splay step
+        if(p->left == u) // u é filho esquerdo. Faz r splay step
+        {
+          DEBUGLN("r splay step");
           _RotateRight(u);
-
-        else // u é filho direito. l splay step
+        }
+        else // u é filho direito. Faz l splay step
+        {
+          DEBUGLN("l splay step");
           _RotateLeft(u);
+        }
       }
-
-      else // u tem avô. Rotação dupla 
+      else // Tem avô. Fazer double rotations
       {
         if(u == p->left && p == g->left) // rr splay step
         {
+          DEBUGLN("rr splay step");
           _RotateRight(p);
           _RotateRight(u);
         }
         if(u == p->right && p == g->right) // ll splay step
         {
+          DEBUGLN("ll splay step");
           _RotateLeft(p);
           _RotateLeft(u);
         }
         if(u == p->left && p == g->right) // rl splay step
         {
+          DEBUGLN("rl splay step");
           _RotateRight(u);
           _RotateLeft(u);
         }
         if(u == p->right && p == g->left) // lr splay step
         {
+          DEBUGLN("lr splay step");
           _RotateLeft(u);
           _RotateRight(u);
         }
@@ -158,10 +187,13 @@ class SplayTree {
 
     void _RotateRight(Node* u) { return _Rotate(u, true); }
 
-    // Sobe nó u rotacionando para a direita caso isRightRotation = true, e para esquerda caso contrário. Atualiza ponteiros afetados. Pressupõe que u é filho esquerdo de um pai não nulo se for uma rotação para a direita e pressupõe que u é filho direito caso contrário
+    // Sobe nó u rotacionando para a direita caso isRightRotation = true, e para esquerda caso contrário. Atualiza ponteiros afetados. Pressupõe que u é filho esquerdo de um pai não nulose for uma rotação para a direita e pressupõe que u é filho direito caso contrário
     void _Rotate (Node* u, bool isRightRotation)
     {
+      DEBUG("Rotate " << (isRightRotation ? "Right " : "Left "));
+      DEBUGLN(u->key);
       Node* p = u->parent;
+      assert(p != nullptr);
       Node* g = p->parent;
 
       /* 
@@ -191,7 +223,9 @@ class SplayTree {
       if(isRightRotation && B != nullptr) B->parent = p;
       if(!isRightRotation && A != nullptr) A->parent = p;
 
-      if(g == nullptr) {}
+      if(g == nullptr) {
+        DEBUGLN("Caso 1");
+      }
 
       /* 
       Caso 2: u tem avô e p é filho esquerdo
@@ -207,6 +241,7 @@ class SplayTree {
 
       else if(g->left == p)
       {
+        DEBUGLN("Caso 2");
         // Atualiza ponteiros de g
         g->left = u;
       }
@@ -225,12 +260,13 @@ class SplayTree {
 
       else
       {
+        DEBUGLN("Caso 3");
         // Atualiza ponteiros de g
         g->right = u;
       }
    }
 
-    // Busca nó com chave x na árvore enraiza em r. Retorna true se x está presente em r e um ponteiro para nó mais profundo atingido 
+    // Procura nó com chave x na árvore enraiza em r. Retorna true se x está presente em r e um ponteiro para nó mais profundo alcançado
     std::pair<bool, Node*> _Search (Node* r, Node* r_parent, const int x)
     {
       if(r == nullptr) return std::make_pair(false, r_parent);
@@ -240,7 +276,7 @@ class SplayTree {
       else return std::make_pair(true, r);
     }
 
-    // Imprime a árvore deitada
+    // Imprime a árvore 
     void Print() const { _Print(root, 0); }
     
   
@@ -254,10 +290,11 @@ class SplayTree {
       std::string space (i, ' '); 
       std::cout << space;
       std::cout << u->key << "\n";
+      //std::cout << u->key << "(" << (u->parent == nullptr ? "null" : std::to_string(u->parent->key)) << ")\n"; // depuração do nó parent
       _Print(u->right, i + 3);
     }
     
-    // Insere nó com chave x na árvore enraizada em r, onde r_parent é o pai de r. Devolve no segundo campo o nó mais profundo atingido
+    // Insere nó com chave x na árvore enraizada em r, onde r_parent é o pai de r. Devolve no segundo campo o nó mais profundo visitado
     std::pair<Node*, Node*> _Insert (Node* r, Node* r_parent, const int x)
     {
       if(r == nullptr) // Árvore vazia
@@ -282,7 +319,91 @@ class SplayTree {
     Node* root;
 };
 
-int main ()
+// Teste inicial para insert. Parece OK
+void Teste1 ()
+{
+  std::cout << "*******************Teste1*******************\n";
+  int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
+  SplayTree st = SplayTree();
+  for(int i = 0; i < n ; i++) st.Insert(insertion_list[i]);
+
+  st.Print();
+}
+
+// Teste para primeiro retorno de Search(). Parece OK
+void Teste2 ()
+{
+  std::cout << "*******************Teste2*******************\n";
+  int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
+  SplayTree st = SplayTree();
+  for(int i = 0; i < n ; i++) st.Insert(insertion_list[i]);
+
+  st.Print();
+
+  int query_list[] = {3, 10, 2, 50, 11, 1, 7, 13, -1, 5, 2, 13, 0};
+  int m = sizeof(query_list) / sizeof(query_list[0]);
+  for(int i = 0; i < m ; i++) std::cout << "Search(" << query_list[i] << ") = " << st.Search(query_list[i]) << "\n"; 
+}
+
+// Teste inicial para Splay(). Parece OK
+void Teste3 ()
+{
+  std::cout << "*******************Teste3*******************\n";
+  int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
+  SplayTree st = SplayTree();
+  for(int i = 0; i < n ; i++) st.Insert(insertion_list[i]);
+
+  st.Print();
+  std::cout << "*****************************\n";
+
+  int query_list[] = {7, 10, 1, 0, 15};
+  int m = sizeof(query_list) / sizeof(query_list[0]);
+  for(int i = 0; i < m ; i++) {
+    std::cout << "Search(" << query_list[i] << ") = " << st.Search(query_list[i]) << "\n"; 
+    st.Print();
+    std::cout << "*****************************\n";
+  }
+}
+
+// Teste inicial para Min(). Parece OK
+void Teste4 ()
+{
+  int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
+  SplayTree st = SplayTree();
+  for(int i = 0; i < n ; i++) st.Insert(insertion_list[i]);
+
+  st.Print();
+  std::cout << "*****************************\n";
+
+  std::cout << "min = " << st.Min() << "\n";
+  st.Print();
+}
+
+// Teste para Delete()
+void Teste5 ()
+{
+  int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
+  SplayTree st = SplayTree();
+  for(int i = 0; i < n ; i++) st.Insert(insertion_list[i]);
+
+  st.Print();
+  std::cout << "*****************************\n";
+
+  int query_list[] = {7, 8, 1, 6, 14, 4, 13, 3, 10};
+  int m = sizeof(query_list) / sizeof(query_list[0]);
+  for(int i = 0; i < m ; i++) {
+    st.Delete(query_list[i]);
+    st.Print();
+    std::cout << "*****************************\n";
+  }
+}
+
+void Teste ()
 {
   SplayTree st = SplayTree();
 
@@ -309,3 +430,15 @@ int main ()
     }
   }
 }
+int main()
+{
+  //Teste1();
+  //Teste2();
+  //Teste3();
+  //Teste4();
+  //Teste5();
+  Teste();
+}
+
+
+
