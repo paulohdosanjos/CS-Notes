@@ -20,8 +20,11 @@ class SplayTree {
 
   public:
 
+    SplayTree (Node* r) { root = r;}
+
     // Constrói splay tree vazia
     SplayTree () { root = nullptr; }
+
 
     // Insere novo nó com chave x na splay tree
     void Insert (const int x) 
@@ -54,6 +57,30 @@ class SplayTree {
       root = p.first;
       root = _Splay(p.second);
     }
+
+    // Imprime a árvore deitada
+    void Print() const { _Print(root, 0); }
+
+    static std::pair<SplayTree*, SplayTree*> Split (SplayTree* st, const int x)
+    {
+      auto p = st->_Search(st->root, nullptr, x);
+      Node* s1 = st->_Splay(p.second);  
+      SplayTree* st2 = new SplayTree(s1->right);
+      s1->right = nullptr;
+      SplayTree* st1 = new SplayTree(s1);
+      return std::make_pair(st1,st2);
+    }
+
+    static SplayTree* Join (SplayTree* S, SplayTree* T)
+    {
+      Node* min_t = T->_Min(T->root);
+      Node* s1 = T->_Splay(min_t);
+      s1->left = S->root;
+      return new SplayTree(s1);
+    }
+    
+  
+  private:
 
     // Remove nó com chave x da árvore enraizada em r. Retorna a árvore resultante e o nó mais profundo atingindo durante a remoção 
     std::pair<Node*, Node*> _Delete(Node* r, const int x)
@@ -240,11 +267,6 @@ class SplayTree {
       else return std::make_pair(true, r);
     }
 
-    // Imprime a árvore deitada
-    void Print() const { _Print(root, 0); }
-    
-  
-  private:
 
     // Imprime nó u depois de i espaços na saída padrão
     void _Print (Node* u, int i) const
@@ -282,8 +304,55 @@ class SplayTree {
     Node* root;
 };
 
+// Teste inicial para Split. Parece OK
+void Teste1 ()
+{
+  std::cout << "*******************Teste1*******************\n";
+  int insertion_list[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insertion_list) / sizeof(insertion_list[0]);
+  SplayTree st = SplayTree();
+  for(int i = 0; i < n ; i++) st.Insert(insertion_list[i]);
+  std::cout << "Árvore original: \n";
+  st.Print();
+
+  int x = 7;
+  auto p = SplayTree::Split(&st, x);
+
+  std::cout << "Árvore com chaves menores ou igual a " << x << ":\n";
+  p.first->Print();
+  std::cout << "Árvore com chaves maiores que " << x << ":\n";
+  p.second->Print();
+}
+
+// Teste inicial para Join. Parece OK
+void Teste2 ()
+{
+  std::cout << "*******************Teste2*******************\n";
+  int insertion_list1[] = {8, 3, 10, 1, 6, 14, 4, 7, 13};
+  int n = sizeof(insertion_list1) / sizeof(insertion_list1[0]);
+  SplayTree S = SplayTree();
+  for(int i = 0; i < n ; i++) S.Insert(insertion_list1[i]);
+  std::cout << "Árvore S: \n";
+  S.Print();
+
+  std::cout << "\n";
+
+  int insertion_list2[] = {15, 14, 19, 22, 21};
+  n = sizeof(insertion_list2) / sizeof(insertion_list2[0]);
+  SplayTree T = SplayTree();
+  for(int i = 0; i < n ; i++) T.Insert(insertion_list2[i]);
+  std::cout << "Árvore T: \n";
+  T.Print();
+
+  SplayTree* R = SplayTree::Join(&S, &T);
+  std::cout << "Árvore Join:\n";
+  R->Print();
+}
+
 int main ()
 {
+  Teste2();
+  return 0;
   SplayTree st = SplayTree();
 
   for(std::string line; std::getline(std::cin, line) ; ) {
