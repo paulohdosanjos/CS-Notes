@@ -1,0 +1,58 @@
+# Ep1 - Implementação do protocolo AMQP 0-9-1
+
+# Configurações
+
+Para criar um container docker rodando o servidor rabbitmq:
+docker run -d --hostname rmq --name rabbit-server -p 8080:15672 -p 5672:5672 rabbitmq:3-management
+
+Para declarar fila: 
+amqp-declare-queue -s 127.0.0.1 -q minha_fila
+
+Para publicar numa fila:
+amqp-publish -s 127.0.0.1 -r minha_fila -b "oi"
+
+Para consumir de uma fila: 
+amqp-consume -s 127.0.0.1 -q minha_fila cat
+
+Para capturar os pacotes pelo sniffer Wireshark, conecta na interface loopback io, com o filtro tcp.port == 5672 na parte superior. O cliente irá usar uma porta diferente de 5672. Dessa forma, conseguimos diferenciar se os pacotes estão vindo no sentido cliente->servidor ou servidor->cliente.
+
+Para ver a correpodência de campos no pacote, basta clicar no que você quer ver no canto inferior esquerdo. Por exemplo, se eu quero ver os bytes correspondentes a porta de origem do segmento tcp, eu clico nessa opção e os bytes correspondentes ficarão em azul no pacote à direita. Cada letra é um byte em hex.
+
+# Conexão
+
+Antes de qualquer uma das três operações:
+
+1 - Three-way handshaking do tcp.
+2 - Cliente envia o protocol header (AMQP 0.9.1)
+3 - Servidor manda Connection.Start (Type = method, Channel = 0, Class = Connection, Method = Start) + infos do servidor
+4 - Cliete envia Connection.Start-Ok (Type = method, Channel = 0, Class = Connection, Method = Start-Ok) + outras infos
+5 - Servidor manda Connection.Tune
+6 - Cliente manda Connection.Tune-Ok
+7 - Cliente manda Connection.Open
+8 - Servidor manda Connection.Open-Ok
+9 - Cliente manda Channel.Open
+10 - Servidor manda Channel.Open-Ok
+
+## amqp-declare-queue 
+
+11 - Cliente manda Queue.Declare com o nome da fila
+12 - Servidor manda Queue.Declare-Ok
+13 - Cliente manda Channel.Close com reply 200
+14 - Servidor manda Channel.Close-Ok 
+15 - Cliente manda Connection.Close
+16 - Servidor manda Connection.Close-Ok
+
+## amqp-publish 
+
+11 - Cliente manda Basic.Publish com o Frame do método + Content Header + Content Body 
+
+## amqp-consume
+
+11 - Cliente manda Basic.Consume com a fila que deseja consumir
+12 - Servidor manda Basic.Consume-Ok 
+13 - Servidor manda Basic.Deliver com a mensagem em questão
+14 - Cliente manda Basic.Ack
+15 - Aparentemente a conexão fica no ar até o cliente fechar a conexão explicitamente
+
+
+Após as operações, cliente e servidor trocam o FYN e encerram a conexão tcp
