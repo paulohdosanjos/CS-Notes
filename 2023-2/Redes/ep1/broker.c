@@ -15,23 +15,22 @@
 #define MAXDATASIZE 100
 #define MAXLINE 4096
 #define MAXSIZE 10000
+#define PROTOCOL_HEADER_SIZE 8
 
 char* parse_protoocol_header(const char*);
 
-// Retorna uma nova string com o parse do protocol header
-char* parse_protocol_header (const char* protocol_header)
+// Faz o parse do protocol header enviado pelo cliente. Tamanho de header deve ser 8
+void parse_protocol_header (unsigned char* header, unsigned char* buf)
 {
-  int header_size = 8;
-  char* s = (char*) malloc((header_size + 1) * sizeof(char)); 
+  memcpy(header, buf, 4); // Copia 'AMQP' para header. Não verifica erro
 
-  strcpy(s, protocol_header);
-  s[4] = (char) ((int) '0' + protocol_header[4]);
-  s[5] = (char) ((int) '0' + protocol_header[5]);
-  s[6] = (char) ((int) '0' + protocol_header[6]);
-  s[7] = (char) ((int) '0' + protocol_header[7]);
+  // Escreve os bytes literais no header
+  header[4] = (int) '0' + buf[4];
+  header[5] = (int) '0' + buf[5];
+  header[6] = (int) '0' + buf[6];
+  header[7] = (int) '0' + buf[7];
 
-  s[8] = '\0';
-  return s;
+  //header[8] = '\0';
 }
 
 // Recebe uma string s e dá o "payload" correspondente
@@ -404,39 +403,32 @@ int main (int argc, char **argv) {
             exit(5);
         }
 
-        break;
-
         close(listenfd);
     
-        // Primeiro, a troca do protocol header
         
-        // Recebe o protocol header
-        char buf[MAXLINE]; 
+        // Recebe Protocol header
+
+        unsigned char protocol_header[PROTOCOL_HEADER_SIZE]; 
         int offset = 0;
         int bytes_read = 0;
 
         while (bytes_read < 8) {
-          n = read(connfd, buf + offset, 8 - bytes_read); 
+          n = read(connfd, protocol_header + offset, 8 - bytes_read); 
           bytes_read += n;
           offset += n;
-          //printf("bytes lidos = %ld\n", n);
-          //recvline[n]=0;
-          printf("[Cliente conectado no processo filho %d enviou o protocol header\n",getpid());
         }
+        printf("Protocol Header recebido\n");
 
-        const char* parsed_protocol_header = parse_protocol_header(recvline);
-        if( strcmp(parsed_protocol_header, "AMQP0901") ) 
+        // Envia Connection.Start
+
+        unsigned char default_protocol_header[] = {'A', 'M', 'Q', 'P', 0x00, 0x00, 0x09, 0x01};
+        if(memcmp(protocol_header, default_protocol_header, sizeof(default_protocol_header)) == 0) 
         { 
           printf("Protocolo válido\n");
 
-          unsigned char frame[MAXSIZE];
-          int n = connection_start(frame);
-
-          printf("frame : \n");
-          for(int i = 0; i < n; i++) printf("%02x ", frame[i]);
-          printf("\n");
-
-          write(connfd, frame, n);
+          unsigned char connection_start_frame[MAXSIZE];
+          int n = connection_start(connection_start_frame);
+          write(connfd, connection_start_frame, n);
         }
         else 
         { 
@@ -444,9 +436,11 @@ int main (int argc, char **argv) {
           close(connfd);
         }
 
+        // Recebe Connection.Start-Ok
+
         close(connfd);
         printf("[Uma conexão fechada]\n");
-        exit(0);
+        //exit(0);
 
     }
     exit(0);
