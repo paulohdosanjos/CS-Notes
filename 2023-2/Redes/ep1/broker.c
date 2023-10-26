@@ -14,8 +14,10 @@
 #define LISTENQ 1
 #define MAXDATASIZE 100
 #define MAXLINE 4096
+
 #define MAXSIZE 10000
 #define PROTOCOL_HEADER_SIZE 8
+#define FRAME_END 0xce
 
 char* parse_protoocol_header(const char*);
 
@@ -361,6 +363,207 @@ int connection_start (unsigned char* frame)
   return frame_length;
 }
 
+int connection_tune (unsigned char* frame)
+{
+  unsigned long int frame_length = 0;
+  int frame_offset = 0;
+
+  // General Frame
+  unsigned char type = 0x1; // Method frame
+  unsigned short int channel = 0x0;
+
+  frame[frame_offset] = type;
+  frame_offset += 1;
+  frame_length += 1;
+
+  write_short_int(frame, frame_offset, channel);
+  frame_offset += 2;
+  frame_length += 2;
+
+
+  // Method frame
+  unsigned char method_frame[MAXSIZE];
+  unsigned long int method_frame_length = 0;
+  int method_frame_offset = 0;
+
+  unsigned short int class_id = 10; // Class Connection
+  unsigned short int method_id = 30; // Method Tune 
+  
+  write_short_int(method_frame, method_frame_offset, class_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  write_short_int(method_frame, method_frame_offset, method_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  // Argumentos
+  unsigned char arguments[MAXSIZE];
+  unsigned long int arguments_length = 0;
+  int arguments_offset = 0;
+
+  unsigned short int channel_max = 2047;
+  unsigned long int frame_max = 131072;
+  unsigned short int heartbeat = 60;
+
+  write_short_int(arguments, arguments_offset, channel_max); 
+  arguments_offset += 2;
+  arguments_length += 2;
+
+  write_long_int(arguments, arguments_offset, frame_max); 
+  arguments_offset += 4;
+  arguments_length += 4;
+
+  write_short_int(arguments, arguments_offset, heartbeat); 
+  arguments_offset += 2;
+  arguments_length += 2;
+
+  write_stream(method_frame, arguments, method_frame_offset, arguments_length);
+  method_frame_offset += arguments_length;
+  method_frame_length += arguments_length;
+
+  write_long_int(frame, frame_offset, method_frame_length);
+  frame_offset += 4;
+  frame_length += 4;
+
+  write_stream(frame, method_frame, frame_offset, method_frame_length);
+  frame_offset += method_frame_length;
+  frame_length += method_frame_length;
+
+  frame[frame_offset] = 0xce;
+  frame_offset += 1;
+  frame_length += 1;
+
+  return frame_length;
+}
+
+int connection_open_ok (unsigned char* frame)
+{
+  unsigned long int frame_length = 0;
+  int frame_offset = 0;
+
+  // General Frame
+  unsigned char type = 0x1; // Method frame
+  unsigned short int channel = 0x0;
+
+  frame[frame_offset] = type;
+  frame_offset += 1;
+  frame_length += 1;
+
+  write_short_int(frame, frame_offset, channel);
+  frame_offset += 2;
+  frame_length += 2;
+
+  // Method frame
+  unsigned char method_frame[MAXSIZE];
+  unsigned long int method_frame_length = 0;
+  int method_frame_offset = 0;
+
+  unsigned short int class_id = 10; // Class Connection
+  unsigned short int method_id = 41; // Method Open-Ok
+  
+  write_short_int(method_frame, method_frame_offset, class_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  write_short_int(method_frame, method_frame_offset, method_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  // Argumentos
+  unsigned char arguments[MAXSIZE];
+  unsigned long int arguments_length = 0;
+  int arguments_offset = 0;
+
+  unsigned char reserved_1 = 0x00;
+
+  arguments[arguments_offset] = reserved_1;
+  arguments_offset += 1;
+  arguments_length += 1;
+
+  write_stream(method_frame, arguments, method_frame_offset, arguments_length);
+  method_frame_offset += arguments_length;
+  method_frame_length += arguments_length;
+
+  write_long_int(frame, frame_offset, method_frame_length);
+  frame_offset += 4;
+  frame_length += 4;
+
+  write_stream(frame, method_frame, frame_offset, method_frame_length);
+  frame_offset += method_frame_length;
+  frame_length += method_frame_length;
+
+  frame[frame_offset] = 0xce;
+  frame_offset += 1;
+  frame_length += 1;
+
+  return frame_length;
+}
+
+int channel_open_ok (unsigned char* frame)
+{
+  unsigned long int frame_length = 0;
+  int frame_offset = 0;
+
+  // General Frame
+  unsigned char type = 0x1; // Method frame
+  unsigned short int channel = 0x1;
+
+  frame[frame_offset] = type;
+  frame_offset += 1;
+  frame_length += 1;
+
+  write_short_int(frame, frame_offset, channel);
+  frame_offset += 2;
+  frame_length += 2;
+
+  // Method frame
+  unsigned char method_frame[MAXSIZE];
+  unsigned long int method_frame_length = 0;
+  int method_frame_offset = 0;
+
+  unsigned short int class_id = 20; // Class channel
+  unsigned short int method_id = 11; // Method Open-Ok
+  
+  write_short_int(method_frame, method_frame_offset, class_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  write_short_int(method_frame, method_frame_offset, method_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  // Argumentos
+  unsigned char arguments[MAXSIZE];
+  unsigned long int arguments_length = 0;
+  int arguments_offset = 0;
+
+  unsigned long int reserved_1 = 0x00;
+
+  write_long_int(arguments, arguments_offset, reserved_1);
+  arguments_offset += 4;
+  arguments_length += 4;
+
+  write_stream(method_frame, arguments, method_frame_offset, arguments_length);
+  method_frame_offset += arguments_length;
+  method_frame_length += arguments_length;
+
+  write_long_int(frame, frame_offset, method_frame_length);
+  frame_offset += 4;
+  frame_length += 4;
+
+  write_stream(frame, method_frame, frame_offset, method_frame_length);
+  frame_offset += method_frame_length;
+  frame_length += method_frame_length;
+
+  frame[frame_offset] = 0xce;
+  frame_offset += 1;
+  frame_length += 1;
+
+  return frame_length;
+}
+
+
 int main (int argc, char **argv) {
     int listenfd, connfd;
     struct sockaddr_in servaddr;
@@ -383,6 +586,10 @@ int main (int argc, char **argv) {
     servaddr.sin_family      = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port        = htons(atoi(argv[1]));
+
+    int option = 1;
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)); // Para não precisar esperar o TIME_WAIT
+
     if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1) {
         perror("bind :(\n");
         exit(3);
@@ -424,7 +631,7 @@ int main (int argc, char **argv) {
         unsigned char default_protocol_header[] = {'A', 'M', 'Q', 'P', 0x00, 0x00, 0x09, 0x01};
         if(memcmp(protocol_header, default_protocol_header, sizeof(default_protocol_header)) == 0) 
         { 
-          printf("Protocolo válido\n");
+          printf("Connection.Start enviado\n");
 
           unsigned char connection_start_frame[MAXSIZE];
           int n = connection_start(connection_start_frame);
@@ -437,6 +644,102 @@ int main (int argc, char **argv) {
         }
 
         // Recebe Connection.Start-Ok
+
+        unsigned char connection_start_ok_frame[MAXSIZE]; 
+        connection_start_ok_frame[0] = 0;
+        offset = 0;
+        bytes_read = 0;
+        unsigned char last_byte_read = 0;
+
+        while (last_byte_read != FRAME_END) {
+          n = read(connfd, connection_start_ok_frame + offset, MAXLINE); 
+          bytes_read += n;
+          offset += n;
+          last_byte_read = connection_start_ok_frame[offset-1];
+        }
+        printf("Connection.Start-Ok recebido\n");
+
+        // Envia o Connection.Tune
+        unsigned char connection_tune_frame[MAXSIZE];
+        n = connection_tune(connection_tune_frame);
+        write(connfd, connection_tune_frame, n);
+
+        printf("Connection.Tune enviado\n");
+
+        // Recebe o Connection.Tune-Ok
+        // Agora o cliente tem a função de mandar dois comandos em sequência, mas não posso assumir que ele vai mandar um seguido do outro, então tenho que fazer as transições de forma separada ?
+
+        unsigned char connection_tune_ok_frame[MAXSIZE]; 
+        connection_tune_ok_frame[0] = 0;
+        offset = 0;
+        bytes_read = 0;
+        last_byte_read = 0;
+
+        while (last_byte_read != FRAME_END) {
+          n = read(connfd, connection_tune_ok_frame + offset, MAXLINE); 
+          bytes_read += n;
+          offset += n;
+          last_byte_read = connection_tune_ok_frame[offset-1];
+        }
+        printf("Connection.Tune-Ok recebido\n");
+
+        int count = 0; // número de frames enviados
+        for(int i = 0; i < bytes_read; i++) if(connection_tune_ok_frame[i] == 0xce) count++; 
+
+        if(count == 1) 
+        {
+          // Recebe o Connection.Open 
+          
+          unsigned char connection_open_frame[MAXSIZE]; 
+          connection_open_frame[0] = 0;
+          offset = 0;
+          bytes_read = 0;
+          last_byte_read = 0;
+
+          while (last_byte_read != FRAME_END) {
+            n = read(connfd, connection_open_frame + offset, MAXLINE); 
+            bytes_read += n;
+            offset += n;
+            last_byte_read = connection_open_frame[offset-1];
+          }
+        }
+
+        printf("Connection.Open recebido\n");
+
+        // Envia o Connection.Open-Ok
+
+        unsigned char connection_open_ok_frame[MAXSIZE];
+        n = connection_open_ok(connection_open_ok_frame);
+        write(connfd, connection_open_ok_frame, n);
+
+        printf("Connection.Open-Ok enviado\n");
+
+        // Recebe Channel.Open
+        unsigned char channel_open_frame[MAXSIZE]; 
+        channel_open_frame[0] = 0;
+        offset = 0;
+        bytes_read = 0;
+        last_byte_read = 0;
+
+        while (last_byte_read != FRAME_END) {
+          n = read(connfd, channel_open_frame + offset, MAXLINE); 
+          bytes_read += n;
+          offset += n;
+          last_byte_read = channel_open_frame[offset-1];
+        }
+
+        printf("Channel.Open recebido\n");
+
+        // Envia Channel.Open-Ok
+        unsigned char channel_open_ok_frame[MAXSIZE];
+        n = channel_open_ok(channel_open_ok_frame);
+        write(connfd, channel_open_ok_frame, n);
+
+        printf("Channel.Open-Ok enviado\n");
+
+        // Agora cheguei no estado WAIT_FUNCTIONAL
+
+        for(;;){}
 
         close(connfd);
         printf("[Uma conexão fechada]\n");
