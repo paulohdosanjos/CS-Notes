@@ -12,6 +12,7 @@
 #define LISTENQ 1
 #define MAXDATASIZE 100
 #define MAXLINE 4096
+#define INICIAL_STATE WAIT_HEADER
 
 #include "queue.h"
 

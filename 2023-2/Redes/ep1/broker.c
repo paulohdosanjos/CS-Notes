@@ -64,72 +64,21 @@ int main (int argc, char **argv) {
 
         close(listenfd);
 
-        //int (*actions[])()
-    
-        // Recebe Protocol header
-
         server_data* data = (server_data*) malloc(sizeof(server_data));
         data->connfd = connfd;
         data->queue_list_size = 0;
 
-        do_WAIT_HEADER(data);
-
-        // Envia Connection.Start
-
-        do_RCVD_HEADER(data);
-
-        // Recebe Connection.Start-Ok
-
-        do_WAIT_START_OK(data);
-
-        // Envia o Connection.Tune
-
-        do_RCVD_START_OK(data);
-
-        // Recebe o Connection.Tune-Ok
-
-        int n = do_WAIT_TUNE_OK(data);
-
-        if(n == 1) do_WAIT_CONNECTION_OPEN(data);
-
-        // Envia o Connection.Open-Ok
-
-        do_RCVD_CONNECTION_OPEN(data);
-
-        // Recebe Channel.Open
-        
-        do_WAIT_CHANNEL_OPEN(data);
-        
-        // Envia Channel.Open-Ok
-
-        do_RCVD_CHANNEL_OPEN(data);
-
-        // Agora cheguei no estado WAIT_FUNCTIONAL
-
-        // Recebe o Queue.Declare 
-
-        do_WAIT_QUEUE_DECLARE(data);
-
-        // Envia o Queue.Declare-Ok 
-
-        do_RCVD_QUEUE_DECLARE(data);
-        
-        // Recebe o Channel.Close 
-
-        do_WAIT_CHANNEL_CLOSE(data);
-        
-        // Envia Channel.Close-Ok
-
-        do_RCVD_CHANNEL_CLOSE(data);
-
-        // Recebe o Connection.Close 
-        
-        do_WAIT_CONNECTION_CLOSE(data);
-
-        // Envia Connection.Close-Ok
-
-        do_RCVD_CONNECTION_CLOSE(data);
-        
+        state current_state = INICIAL_STATE;
+        printf("ESTADO INICAL: %s\n", state_name[current_state]);
+        int n;
+        while(current_state != FINAL)
+        {
+          n = (*actions[current_state])(data);
+          printf("CODE : %d\n", n);
+          current_state = transitions[current_state][n];
+          printf("ESTADO : %s\n", state_name[current_state]);
+        }
+    
         for(;;){}
 
         close(connfd);
