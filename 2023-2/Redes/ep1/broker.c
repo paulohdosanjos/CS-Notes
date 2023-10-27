@@ -500,6 +500,63 @@ int connection_open_ok (unsigned char* frame)
   return frame_length;
 }
 
+int connection_close_ok (unsigned char* frame)
+{
+  unsigned long int frame_length = 0;
+  int frame_offset = 0;
+
+  // General Frame
+  unsigned char type = 0x1; // Method frame
+  unsigned short int channel = 0x0;
+
+  frame[frame_offset] = type;
+  frame_offset += 1;
+  frame_length += 1;
+
+  write_short_int(frame, frame_offset, channel);
+  frame_offset += 2;
+  frame_length += 2;
+
+  // Method frame
+  unsigned char method_frame[MAXSIZE];
+  unsigned long int method_frame_length = 0;
+  int method_frame_offset = 0;
+
+  unsigned short int class_id = 10; // Class Connection
+  unsigned short int method_id = 51; // Method Close-Ok
+  
+  write_short_int(method_frame, method_frame_offset, class_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  write_short_int(method_frame, method_frame_offset, method_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  // Argumentos
+  unsigned char arguments[MAXSIZE];
+  unsigned long int arguments_length = 0;
+  int arguments_offset = 0;
+
+  write_stream(method_frame, arguments, method_frame_offset, arguments_length);
+  method_frame_offset += arguments_length;
+  method_frame_length += arguments_length;
+
+  write_long_int(frame, frame_offset, method_frame_length);
+  frame_offset += 4;
+  frame_length += 4;
+
+  write_stream(frame, method_frame, frame_offset, method_frame_length);
+  frame_offset += method_frame_length;
+  frame_length += method_frame_length;
+
+  frame[frame_offset] = 0xce;
+  frame_offset += 1;
+  frame_length += 1;
+
+  return frame_length;
+}
+
 int channel_open_ok (unsigned char* frame)
 {
   unsigned long int frame_length = 0;
@@ -563,6 +620,136 @@ int channel_open_ok (unsigned char* frame)
   return frame_length;
 }
 
+int channel_close_ok (unsigned char* frame)
+{
+  unsigned long int frame_length = 0;
+  int frame_offset = 0;
+
+  // General Frame
+  unsigned char type = 0x1; // Method frame
+  unsigned short int channel = 0x1;
+
+  frame[frame_offset] = type;
+  frame_offset += 1;
+  frame_length += 1;
+
+  write_short_int(frame, frame_offset, channel);
+  frame_offset += 2;
+  frame_length += 2;
+
+  // Method frame
+  unsigned char method_frame[MAXSIZE];
+  unsigned long int method_frame_length = 0;
+  int method_frame_offset = 0;
+
+  unsigned short int class_id = 20; // Class channel
+  unsigned short int method_id = 41; // Method Close-Ok
+  
+  write_short_int(method_frame, method_frame_offset, class_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  write_short_int(method_frame, method_frame_offset, method_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  // Argumentos
+  unsigned char arguments[MAXSIZE];
+  unsigned long int arguments_length = 0;
+  int arguments_offset = 0;
+
+  write_stream(method_frame, arguments, method_frame_offset, arguments_length);
+  method_frame_offset += arguments_length;
+  method_frame_length += arguments_length;
+
+  write_long_int(frame, frame_offset, method_frame_length);
+  frame_offset += 4;
+  frame_length += 4;
+
+  write_stream(frame, method_frame, frame_offset, method_frame_length);
+  frame_offset += method_frame_length;
+  frame_length += method_frame_length;
+
+  frame[frame_offset] = 0xce;
+  frame_offset += 1;
+  frame_length += 1;
+
+  return frame_length;
+}
+
+int queue_declare_ok(unsigned char* frame, char* _queue_name)
+{
+  unsigned long int frame_length = 0;
+  int frame_offset = 0;
+
+  // General Frame
+  unsigned char type = 0x1; // Method frame
+  unsigned short int channel = 0x1;
+
+  frame[frame_offset] = type;
+  frame_offset += 1;
+  frame_length += 1;
+
+  write_short_int(frame, frame_offset, channel);
+  frame_offset += 2;
+  frame_length += 2;
+
+  // Method frame
+  unsigned char method_frame[MAXSIZE];
+  unsigned long int method_frame_length = 0;
+  int method_frame_offset = 0;
+
+  unsigned short int class_id = 50; // Class Queue
+  unsigned short int method_id = 11; // Method Declare-Ok
+  
+  write_short_int(method_frame, method_frame_offset, class_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  write_short_int(method_frame, method_frame_offset, method_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  // Argumentos
+  unsigned char arguments[MAXSIZE];
+  unsigned long int arguments_length = 0;
+  int arguments_offset = 0;
+
+  unsigned char* queue_name = to_shortstr(_queue_name);
+  unsigned long int message_count = 0;
+  unsigned long int consumer_count = 0;
+
+  int n = 1 + strlen(_queue_name);
+  write_stream(arguments, queue_name, arguments_offset, 1 + strlen(_queue_name));
+  arguments_offset += n;
+  arguments_length += n;
+
+  write_long_int(arguments, arguments_offset, message_count);
+  arguments_offset += 4;
+  arguments_length += 4;
+
+  write_long_int(arguments, arguments_offset, consumer_count);
+  arguments_offset += 4;
+  arguments_length += 4;
+
+  write_stream(method_frame, arguments, method_frame_offset, arguments_length);
+  method_frame_offset += arguments_length;
+  method_frame_length += arguments_length;
+
+  write_long_int(frame, frame_offset, method_frame_length);
+  frame_offset += 4;
+  frame_length += 4;
+
+  write_stream(frame, method_frame, frame_offset, method_frame_length);
+  frame_offset += method_frame_length;
+  frame_length += method_frame_length;
+
+  frame[frame_offset] = 0xce;
+  frame_offset += 1;
+  frame_length += 1;
+
+  return frame_length;
+}
 
 int main (int argc, char **argv) {
     int listenfd, connfd;
@@ -738,6 +925,84 @@ int main (int argc, char **argv) {
         printf("Channel.Open-Ok enviado\n");
 
         // Agora cheguei no estado WAIT_FUNCTIONAL
+        // Farei o declare_queue primeiro 
+
+        // Recebe o Queue.Declare-Ok 
+
+        unsigned char queue_declare_frame[MAXSIZE]; 
+        queue_declare_frame[0] = 0;
+        offset = 0;
+        bytes_read = 0;
+        last_byte_read = 0;
+
+        while (last_byte_read != FRAME_END) {
+          n = read(connfd, queue_declare_frame + offset, MAXLINE); 
+          bytes_read += n;
+          offset += n;
+          last_byte_read = queue_declare_frame[offset-1];
+        }
+
+        printf("Queue.Declare recebido\n");
+
+        // Extrai nome da fila
+        int queue_name_size = queue_declare_frame[13];
+        char queue_name[MAXLINE];
+        memcpy(queue_name, queue_declare_frame + 14, queue_name_size);
+        queue_name[queue_name_size] = 0;
+
+        // Envia o Queue.Declare-Ok 
+        unsigned char queue_declare_ok_frame[MAXSIZE];
+        n = queue_declare_ok(queue_declare_ok_frame, queue_name);
+        write(connfd, queue_declare_ok_frame, n);
+
+        printf("Queue.Declare-Ok enviado\n");
+
+        // Recebe o Channel.Close 
+        unsigned char channel_close_frame[MAXSIZE]; 
+        channel_close_frame[0] = 0;
+        offset = 0;
+        bytes_read = 0;
+        last_byte_read = 0;
+
+        while (last_byte_read != FRAME_END) {
+          n = read(connfd, channel_close_frame + offset, MAXLINE); 
+          bytes_read += n;
+          offset += n;
+          last_byte_read = channel_close_frame[offset-1];
+        }
+
+        printf("Channel.Close recebido\n");
+
+        // Envia Channel.Close-Ok
+        unsigned char channel_close_ok_frame[MAXSIZE];
+        n = channel_close_ok(channel_close_ok_frame);
+        write(connfd, channel_close_ok_frame, n);
+
+        printf("Channel.Close-Ok enviado\n");
+
+        // Recebe o Connection.Close 
+        unsigned char connection_close_frame[MAXSIZE]; 
+        connection_close_frame[0] = 0;
+        offset = 0;
+        bytes_read = 0;
+        last_byte_read = 0;
+
+        while (last_byte_read != FRAME_END) {
+          n = read(connfd, connection_close_frame + offset, MAXLINE); 
+          bytes_read += n;
+          offset += n;
+          last_byte_read = connection_close_frame[offset-1];
+        }
+
+        printf("Connection.Close recebido\n");
+
+        // Envia Connection.Close-Ok
+        unsigned char connection_close_ok_frame[MAXSIZE];
+        n = connection_close_ok(connection_close_ok_frame);
+        write(connfd, connection_close_ok_frame, n);
+
+        printf("Connection.Close-Ok enviado\n");
+
 
         for(;;){}
 
