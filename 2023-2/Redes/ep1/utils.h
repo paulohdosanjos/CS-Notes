@@ -1,3 +1,7 @@
+int read_frame (int connfd, unsigned char* buf);
+
+int read_header (int connfd, unsigned char* buf);
+
 unsigned char* to_longstr(char* value);
 
 unsigned char* to_shortstr(char* value);

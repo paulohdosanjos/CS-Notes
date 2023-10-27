@@ -7,7 +7,7 @@
 // Cria nova fila e retorna um ponteiro para ela
 queue* create_queue(char* queue_name)
 {
-  queue* q = malloc(sizeof(queue));
+  queue* q = (queue*) malloc(sizeof(queue));
   strcpy(q->name, queue_name);
   q->size = 0;
   q->first = NULL;
@@ -18,7 +18,7 @@ queue* create_queue(char* queue_name)
 // Empilha mensagem msg na fila q
 void enqueue_queue(queue* q, char* msg)
 {
-  node* new_node = malloc(sizeof(node));
+  node* new_node = (node*) malloc(sizeof(node));
   new_node->next = NULL;
   new_node->past = q->last;
   strcpy(new_node->message, msg);

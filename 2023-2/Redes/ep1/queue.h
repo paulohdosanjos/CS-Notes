@@ -1,7 +1,9 @@
+#ifndef QUEUE_H
+#define QUEUE_H
 // Implementação de uma fila usando lista ligada
 
 #define MAX_QUEUE_NAME_LENGTH 256
-#define MAX_MSG_LENGTH 256
+#define MAX_MSG_LENGTH 1024
 
 /*
  
@@ -36,3 +38,6 @@ void dequeue_queue(queue* q, char* buf);
 
 // Deleta fila q
 void remove_queue(queue* q);
+
+#endif
+

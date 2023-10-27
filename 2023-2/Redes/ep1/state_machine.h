@@ -20,32 +20,32 @@
 
 extern const unsigned char DEFAULT_PROTOCOL_HEADER[];
 
-int do_WAIT_HEADER (int connfd);
+int do_WAIT_HEADER (server_data* data);
 
-int do_RCVD_HEADER (int connfd);
+int do_RCVD_HEADER (server_data* data);
 
-int do_WAIT_START_OK (int connfd);
+int do_WAIT_START_OK (server_data* data);
 
-int do_RCVD_START_OK (int connfd);
+int do_RCVD_START_OK (server_data* data);
 
-int do_WAIT_TUNE_OK (int connfd);
+int do_WAIT_TUNE_OK (server_data* data);
 
-int do_WAIT_CONNECTION_OPEN (int connfd);
+int do_WAIT_CONNECTION_OPEN (server_data* data);
 
-int do_RCVD_CONNECTION_OPEN (int connfd);
+int do_RCVD_CONNECTION_OPEN (server_data* data);
 
-int do_WAIT_CHANNEL_OPEN (int connfd);
+int do_WAIT_CHANNEL_OPEN (server_data* data);
 
-int do_RCVD_CHANNEL_OPEN (int connfd);
+int do_RCVD_CHANNEL_OPEN (server_data* data);
 
-int do_WAIT_QUEUE_DECLARE (int connfd, queue* queue_list[], int tam);
+int do_WAIT_QUEUE_DECLARE (server_data* data);
 
-int do_RCVD_QUEUE_DECLARE (int connfd, char* queue_name);
+int do_RCVD_QUEUE_DECLARE (server_data* data);
 
-int do_WAIT_CHANNEL_CLOSE (int connfd);
+int do_WAIT_CHANNEL_CLOSE (server_data* data);
 
-int do_RCVD_CHANNEL_CLOSE (int connfd);
+int do_RCVD_CHANNEL_CLOSE (server_data* data);
 
-int do_WAIT_CONNECTION_CLOSE (int connfd);
+int do_WAIT_CONNECTION_CLOSE (server_data* data);
 
-int do_RCVD_CONNECTION_CLOSE (int connfd);
+int do_RCVD_CONNECTION_CLOSE (server_data* data);

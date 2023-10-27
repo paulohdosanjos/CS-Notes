@@ -12,21 +12,10 @@ typedef enum {
 } state;
 
 // Servidor espera o protocol header do cliente e o valida. Retorna 1 se tudo deu certo e o protocolo é válido, retorna 0 caso contrário
-int do_WAIT_HEADER (int connfd)
+int do_WAIT_HEADER (server_data* data)
 {
   unsigned char buf[MAXSIZE];
-  int n;
-  buf[0] = 0;
-  int offset = 0;
-  int bytes_read = 0;
-  unsigned char last_byte_read = 0;
-
-  while (bytes_read != 8) {
-    n = read(connfd, buf + offset, MAXLINE); 
-    bytes_read += n;
-    offset += n;
-    last_byte_read = buf[offset-1];
-  }
+  read_header(data->connfd, buf);
 
   printf("Protocol Header recebido\n");
 
@@ -39,11 +28,11 @@ int do_WAIT_HEADER (int connfd)
 }
 
 // Servidor manda um Connection.Start para o cliente
-int do_RCVD_HEADER (int connfd)
+int do_RCVD_HEADER (server_data* data)
 {
-    unsigned char connection_start_frame[MAXSIZE];
-    int n = connection_start(connection_start_frame);
-    write(connfd, connection_start_frame, n);
+    unsigned char buf[MAXSIZE];
+    int n = connection_start(buf);
+    write(data->connfd, buf, n);
 
     printf("Connection.Start enviado\n");
 
@@ -51,32 +40,22 @@ int do_RCVD_HEADER (int connfd)
 }
 
 // Servidor espera um Connection.Start-Ok do cliente
-int do_WAIT_START_OK (int connfd)
+int do_WAIT_START_OK (server_data* data)
 {
-  int n;
-  unsigned char connection_start_ok_frame[MAXSIZE]; 
-  connection_start_ok_frame[0] = 0;
-  int offset = 0;
-  int bytes_read = 0;
-  int last_byte_read = 0;
+  unsigned char buf[MAXSIZE];
+  read_frame(data->connfd, buf);
 
-  while (last_byte_read != FRAME_END) {
-    n = read(connfd, connection_start_ok_frame + offset, MAXLINE); 
-    bytes_read += n;
-    offset += n;
-    last_byte_read = connection_start_ok_frame[offset-1];
-  }
   printf("Connection.Start-Ok recebido\n");
   return 1;
 }
 
 // Servidor manda um Connection.Tune para o cliente
-int do_RCVD_START_OK (int connfd)
+int do_RCVD_START_OK (server_data* data)
 {
   int n;
-  unsigned char connection_tune_frame[MAXSIZE];
-  n = connection_tune(connection_tune_frame);
-  write(connfd, connection_tune_frame, n);
+  unsigned char buf[MAXSIZE];
+  n = connection_tune(buf);
+  write(data->connfd, buf, n);
 
   printf("Connection.Tune enviado\n");
 
@@ -84,26 +63,16 @@ int do_RCVD_START_OK (int connfd)
 }
 
 // Servidor espera um Connection.Tune-Ok do cliente. Como logo em seguida ele deverá receber um Connection.Open, é possível que essa ação leia os dois comandos de uma vez. Retorna 2 caso isso aconteça e 1 caso contrário
-int do_WAIT_TUNE_OK (int connfd)
+int do_WAIT_TUNE_OK (server_data* data)
 {
-  int n;
-  unsigned char connection_tune_ok_frame[MAXSIZE]; 
-  connection_tune_ok_frame[0] = 0;
-  int offset = 0;
-  int bytes_read = 0;
-  int last_byte_read = 0;
 
-  while (last_byte_read != FRAME_END) {
-    n = read(connfd, connection_tune_ok_frame + offset, MAXLINE); 
-    bytes_read += n;
-    offset += n;
-    last_byte_read = connection_tune_ok_frame[offset-1];
-  }
+  unsigned char buf[MAXSIZE];
+  int bytes_read = read_frame(data->connfd, buf);
 
   printf("Connection.Tune-Ok recebido\n");
 
   int count = 0; // Contará quantos frames amqp foram enviados pelo cliente
-  for(int i = 0; i < bytes_read; i++) if(connection_tune_ok_frame[i] == FRAME_END) count++; 
+  for(int i = 0; i < bytes_read; i++) if(buf[i] == FRAME_END) count++; 
 
   if(count == 2) 
     printf("Connection.Open recebido\n");
@@ -112,32 +81,21 @@ int do_WAIT_TUNE_OK (int connfd)
 }
 
 // Servidor recebe Connection.Open do cliente
-int do_WAIT_CONNECTION_OPEN (int connfd)
+int do_WAIT_CONNECTION_OPEN (server_data* data)
 {
-  int n;
-  unsigned char connection_open_frame[MAXSIZE]; 
-  connection_open_frame[0] = 0;
-  int offset = 0;
-  int bytes_read = 0;
-  int last_byte_read = 0;
-
-  while (last_byte_read != FRAME_END) {
-    n = read(connfd, connection_open_frame + offset, MAXLINE); 
-    bytes_read += n;
-    offset += n;
-    last_byte_read = connection_open_frame[offset-1];
-  }
+  unsigned char buf[MAXSIZE];
+  int bytes_read = read_frame(data->connfd, buf);
 
   return 1;
 }
 
 // Servidor envia Connection.Open-Ok para o cliente
-int do_RCVD_CONNECTION_OPEN (int connfd)
+int do_RCVD_CONNECTION_OPEN (server_data* data)
 {
   int n;
-  unsigned char connection_open_ok_frame[MAXSIZE];
-  n = connection_open_ok(connection_open_ok_frame);
-  write(connfd, connection_open_ok_frame, n);
+  unsigned char buf[MAXSIZE];
+  n = connection_open_ok(buf);
+  write(data->connfd, buf, n);
 
   printf("Connection.Open-Ok enviado\n");
 
@@ -145,21 +103,10 @@ int do_RCVD_CONNECTION_OPEN (int connfd)
 }
 
 // Servidor recebe Channel.Open do cliente
-int do_WAIT_CHANNEL_OPEN (int connfd)
+int do_WAIT_CHANNEL_OPEN (server_data* data)
 {
-  int n;
-  unsigned char channel_open_frame[MAXSIZE]; 
-  channel_open_frame[0] = 0;
-  int offset = 0;
-  int bytes_read = 0;
-  int last_byte_read = 0;
-
-  while (last_byte_read != FRAME_END) {
-    n = read(connfd, channel_open_frame + offset, MAXLINE); 
-    bytes_read += n;
-    offset += n;
-    last_byte_read = channel_open_frame[offset-1];
-  }
+  unsigned char buf[MAXSIZE];
+  int bytes_read = read_frame(data->connfd, buf);
 
   printf("Channel.Open recebido\n");
 
@@ -167,12 +114,12 @@ int do_WAIT_CHANNEL_OPEN (int connfd)
 }
 
 // Servidor envia Channel.Open-Ok para o cliente
-int do_RCVD_CHANNEL_OPEN(int connfd)
+int do_RCVD_CHANNEL_OPEN(server_data* data)
 {
   int n;
-  unsigned char channel_open_ok_frame[MAXSIZE];
-  n = channel_open_ok(channel_open_ok_frame);
-  write(connfd, channel_open_ok_frame, n);
+  unsigned char buf[MAXSIZE];
+  n = channel_open_ok(buf);
+  write(data->connfd, buf, n);
 
   printf("Channel.Open-Ok enviado\n");
 
@@ -180,40 +127,30 @@ int do_RCVD_CHANNEL_OPEN(int connfd)
 }
 
 // Servidor recebe Queue.Declare do cliente e faz a criação da nova fila. Retorna a quantidade de filas criadas
-int do_WAIT_QUEUE_DECLARE (int connfd, queue* queue_list[], int tam)
+int do_WAIT_QUEUE_DECLARE (server_data* data)
 {
-  int n;
-  unsigned char queue_declare_frame[MAXSIZE]; 
-  queue_declare_frame[0] = 0;
-  int offset = 0;
-  int bytes_read = 0;
-  int last_byte_read = 0;
-
-  while (last_byte_read != FRAME_END) {
-    n = read(connfd, queue_declare_frame + offset, MAXLINE); 
-    bytes_read += n;
-    offset += n;
-    last_byte_read = queue_declare_frame[offset-1];
-  }
-
+  unsigned char buf[MAXSIZE];
+  int bytes_read = read_frame(data->connfd, buf);
+  
   printf("Queue.Declare recebido\n");
 
   // Extrai nome da fila
-  int queue_name_size = queue_declare_frame[QUEUE_NAME_LENGTH_OFFSET];
+  int queue_name_size = buf[QUEUE_NAME_LENGTH_OFFSET];
   char queue_name[MAXLINE];
-  memcpy(queue_name, queue_declare_frame + QUEUE_NAME_LENGTH_OFFSET + 1, queue_name_size);
+  memcpy(queue_name, buf + QUEUE_NAME_LENGTH_OFFSET + 1, queue_name_size);
   queue_name[queue_name_size] = 0;
 
   // Cria uma fila vazia com o nome requerido. Depois verificar se a fila existe
   int is_present = FALSE;
 
-  for(int i = 0; i < tam; i++) 
-    if(strcmp(queue_list[i]->name, queue_name) == 0) is_present = TRUE;
+  for(int i = 0; i < data->queue_list_size; i++) 
+    if(strcmp(data->queue_list[i]->name, queue_name) == 0) is_present = TRUE;
   
   if(!is_present)
   {
     queue* q = create_queue(queue_name); // Aloca nova fila vazia com nome queue_name
-    queue_list[tam] = q;
+    data->queue_list_size++;
+    data->queue_list[data->queue_list_size-1] = q;
     return 1;
   }
 
@@ -222,12 +159,15 @@ int do_WAIT_QUEUE_DECLARE (int connfd, queue* queue_list[], int tam)
 }
 
 // Servidor envia Queue.Declare-Ok para o cliente
-int do_RCVD_QUEUE_DECLARE(int connfd, char* queue_name)
+int do_RCVD_QUEUE_DECLARE(server_data* data)
 {
   int n;
-  unsigned char queue_declare_ok_frame[MAXSIZE];
-  n = queue_declare_ok(queue_declare_ok_frame, queue_name);
-  write(connfd, queue_declare_ok_frame, n);
+  unsigned char buf[MAXSIZE];
+
+  // Se o servidor chegou nesse estado, é porque o cliente criou uma fila. Elá está na última posição da lista de filas. Mas e se size for 0?
+  char* queue_name = data->queue_list[data->queue_list_size-1]->name;
+  n = queue_declare_ok(buf, queue_name);
+  write(data->connfd, buf, n);
 
   printf("Queue.Declare-Ok enviado\n");
 
@@ -235,21 +175,10 @@ int do_RCVD_QUEUE_DECLARE(int connfd, char* queue_name)
 }
 
 // Servidor recebe Channel.Close do cliente
-int do_WAIT_CHANNEL_CLOSE (int connfd)
+int do_WAIT_CHANNEL_CLOSE (server_data* data)
 {
-  int n;
-  unsigned char channel_close_frame[MAXSIZE]; 
-  channel_close_frame[0] = 0;
-  int offset = 0;
-  int bytes_read = 0;
-  int last_byte_read = 0;
-
-  while (last_byte_read != FRAME_END) {
-    n = read(connfd, channel_close_frame + offset, MAXLINE); 
-    bytes_read += n;
-    offset += n;
-    last_byte_read = channel_close_frame[offset-1];
-  }
+  unsigned char buf[MAXSIZE];
+  int bytes_read = read_frame(data->connfd, buf);
 
   printf("Channel.Close recebido\n");
 
@@ -257,12 +186,12 @@ int do_WAIT_CHANNEL_CLOSE (int connfd)
 }
 
 // Servidor manda Channel.Close-Ok para o cliente
-int do_RCVD_CHANNEL_CLOSE (int connfd)
+int do_RCVD_CHANNEL_CLOSE (server_data* data)
 {
   int n;
-  unsigned char channel_close_ok_frame[MAXSIZE];
-  n = channel_close_ok(channel_close_ok_frame);
-  write(connfd, channel_close_ok_frame, n);
+  unsigned char buf[MAXSIZE];
+  n = channel_close_ok(buf);
+  write(data->connfd, buf, n);
 
   printf("Channel.Close-Ok enviado\n");
 
@@ -270,55 +199,25 @@ int do_RCVD_CHANNEL_CLOSE (int connfd)
 }
 
 // Servidor recebe Connection.Close do cliente
-int do_WAIT_CONNECTION_CLOSE (int connfd)
+int do_WAIT_CONNECTION_CLOSE (server_data* data)
 {
-  int n;
-  unsigned char connection_close_frame[MAXSIZE]; 
-  connection_close_frame[0] = 0;
-  int offset = 0;
-  int bytes_read = 0;
-  int last_byte_read = 0;
-
-  while (last_byte_read != FRAME_END) {
-    n = read(connfd, connection_close_frame + offset, MAXLINE); 
-    bytes_read += n;
-    offset += n;
-    last_byte_read = connection_close_frame[offset-1];
-  }
-
+  unsigned char buf[MAXSIZE];
+  int bytes_read = read_frame(data->connfd, buf);
+  
   printf("Connection.Close recebido\n");
 
   return 1;
 }
 
 // Servidor manda Channel.Close-Ok para o cliente
-int do_RCVD_CONNECTION_CLOSE (int connfd)
+int do_RCVD_CONNECTION_CLOSE (server_data* data)
 {
   int n;
-  unsigned char connection_close_ok_frame[MAXSIZE];
-  n = connection_close_ok(connection_close_ok_frame);
-  write(connfd, connection_close_ok_frame, n);
+  unsigned char buf[MAXSIZE];
+  n = connection_close_ok(buf);
+  write(data->connfd, buf, n);
 
   printf("Connection.Close-Ok enviado\n");
 
   return 1;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

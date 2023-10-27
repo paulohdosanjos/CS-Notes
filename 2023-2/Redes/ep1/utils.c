@@ -1,9 +1,48 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "utils.h"
 #include "config.h"
+
+// Lê um frame do socket e escreve em buf
+int read_frame (int connfd, unsigned char* buf)
+{
+  int n;
+  buf[0] = 0;
+  int offset = 0;
+  int bytes_read = 0;
+  int last_byte_read = 0;
+
+  while (last_byte_read != FRAME_END) {
+    n = read(connfd, buf + offset, MAXLINE); 
+    bytes_read += n;
+    offset += n;
+    last_byte_read = buf[offset-1];
+  }
+
+  return bytes_read;
+}
+
+// Lê um frame do socket e escreve em buf
+int read_header (int connfd, unsigned char* buf)
+{
+  int n;
+  buf[0] = 0;
+  int offset = 0;
+  int bytes_read = 0;
+  int last_byte_read = 0;
+
+  while (bytes_read < PROTOCOL_HEADER_SIZE) {
+    n = read(connfd, buf + offset, MAXLINE); 
+    bytes_read += n;
+    offset += n;
+    last_byte_read = buf[offset-1];
+  }
+
+  return bytes_read;
+}
 
 // Recebe uma string s e dá o "payload" correspondente
 unsigned char* to_longstr(char* value)
