@@ -44,60 +44,69 @@ int read_header (int connfd, unsigned char* buf)
   return bytes_read;
 }
 
-// Recebe uma string s e dá o "payload" correspondente
-unsigned char* to_longstr(char* value)
+// Retorna um buffer contendo a representação em longstr de uma string s. Recebe uma string s, aloca espaço e escreve num buffer o tamanho da string concatenado com a própria string. O tamanho da short string deve caber em 4 byte
+unsigned char* to_longstr(char* s)
 {
-  unsigned long int n = strlen(value);
-  unsigned char* s = (unsigned char*) malloc((n + 4) * sizeof (unsigned char)); 
-  s[3] = n & 0xFF; 
-  n >>= 8;
-  s[2] = n & 0xFF; 
-  n >>= 8;
-  s[1] = n & 0xFF;
-  n >>= 8;
-  s[0] = n & 0xFF; 
+  unsigned long int n = strlen(s);
+  unsigned char* s_longstr = (unsigned char*) malloc((n + 4) * sizeof (unsigned char)); 
 
-  for(int i = 0; i < strlen(value); i++) 
-    s[i+4] = value[i];
+  write_long_int(s_longstr, 0, n);
 
-  return s;
+  //s_longstr[3] = n & 0xFF; 
+  //n >>= 8;
+  //s_longstr[2] = n & 0xFF; 
+  //n >>= 8;
+  //s_longstr[1] = n & 0xFF;
+  //n >>= 8;
+  //s_longstr[0] = n & 0xFF; 
+
+  memcpy(s_longstr + 4, s, n);
+  //for(int i = 0; i < n; i++) 
+  //  s_longstr[i+4] = s[i];
+
+  return s_longstr;
 }
 
-// Recebe uma string s e dá o "payload" correspondente
-unsigned char* to_shortstr(char* value)
+// Retorna um buffer contendo a representação em shorstr de uma string s. Recebe uma string s, aloca espaço e escreve num buffer o tamanho da string concatenado com a própria string. O tamanho da short string deve caber em 1 byte
+unsigned char* to_shortstr(char* s)
 {
-  unsigned char n = strlen(value);
-  unsigned char* s = (unsigned char*) malloc((n + 1) * sizeof (unsigned char)); 
-  s[0] = n; 
+  int n = strlen(s);
+  unsigned char* shortstr = (unsigned char*) malloc((n + 1) * sizeof (unsigned char)); 
+  shortstr[0] = n; 
 
-  for(int i = 0; i < strlen(value); i++) 
-    s[i+1] = value[i];
+  memcpy(shortstr + 1, s, n);
+  //for(int i = 0; i < n; i++) 
+  //  shortstr[i+1] = s[i];
 
-  return s;
+  return shortstr;
 }
 
-// Escreve o short int n na posição i do frame, ele ocupará 2 bytes
-void write_short_int(unsigned char* frame, int i, unsigned short int n)
+// Escreve os dois bytes de n de forma contígua a partir da posição i de dst. Retorna a quantidade de bytes escritos 
+int write_short_int(unsigned char* dst, int i, unsigned short int n)
 {
-  frame[i+1] = n & 0xFF; 
+  dst[i+1] = n & 0xFF; 
   n >>= 8;
-  frame[i] = n & 0xFF; 
+  dst[i] = n & 0xFF; 
+
+  return 2;
 }
 
-// Escreve o long int n na posição i do frame, ele ocupará 4 bytes
-void write_long_int(unsigned char* frame, int i, unsigned long int n)
+// Escreve os 4 bytes de n de forma contígua a partir da posição i de dst. Retorna a quantidade de bytes escritos 
+int write_long_int(unsigned char* dst, int i, unsigned long int n)
 {
-  frame[i+3] = n & 0xFF; 
+  dst[i+3] = n & 0xFF; 
   n >>= 8;
-  frame[i+2] = n & 0xFF; 
+  dst[i+2] = n & 0xFF; 
   n >>= 8;
-  frame[i+1] = n & 0xFF; 
+  dst[i+1] = n & 0xFF; 
   n >>= 8;
-  frame[i] = n & 0xFF; 
+  dst[i] = n & 0xFF; 
+
+  return 4;
 }
 
-// Escreve o long long int n na posição i do frame, ele ocupará 8 bytes
-void write_long_long_int(unsigned char* frame, int i, unsigned long int n)
+// Escreve os 8 bytes de n de forma contígua a partir da posição i de dst. Retorna a quantidade de bytes escritos 
+int write_long_long_int(unsigned char* frame, int i, unsigned long long int n)
 {
   frame[i+7] = n & 0xFF; 
   n >>= 8;
@@ -114,6 +123,8 @@ void write_long_long_int(unsigned char* frame, int i, unsigned long int n)
   frame[i+1] = n & 0xFF; 
   n >>= 8;
   frame[i] = n & 0xFF; 
+
+  return 8;
 }
 
 // Escreve n bytes de buffer a partir da posição i do frame
@@ -845,46 +856,15 @@ int basic_consume_ok(unsigned char* frame, char* _consumer_tag)
   return frame_length;
 }
 
-int basic_deliver(unsigned char* frame, unsigned char* msg, int msg_length, char* _consumer_tag, char* _queue_name)
+// Escreve em dst os frames do comando Basic.Deliver enviado pelo servidor. Recebe como parâmetros a mensagem a ser enviada, junto com seu tamanho, além do nome da fila onde a mensagem está armazenada e o consumer_tag do cliente
+int basic_deliver(unsigned char* dst, unsigned char* msg, int msg_size, char* _consumer_tag, char* _queue_name)
 {
-
-  // Montagem do Method frame Basic.Deliver
-  unsigned char method_frame[MAXSIZE];
-  unsigned long int method_frame_length = 0;
-  int method_frame_offset = 0;
-
-  // Parte do General Frame
-  unsigned char type = 1; // Method frame
-  unsigned short int channel = 1;
-
-  method_frame[method_frame_offset] = type;
-  method_frame_offset += 1;
-  method_frame_length += 1;
-
-  write_short_int(method_frame, method_frame_offset, channel);
-  method_frame_offset += 2;
-  method_frame_length += 2;
-
-  // Para espercífica do Method frame
-  unsigned char payload[MAXSIZE];
-  unsigned long int payload_length = 0;
-  int payload_offset = 0;
-
-  unsigned short int class_id = 60; // Class Basic
-  unsigned short int method_id = 60; // Method Deliver
+  // Serão montados 3 frames (Method Frame + Content Frame + 1 Content Body) nessa ordem, e depois serão todos agrupados e escritos em dst
   
-  write_short_int(payload, payload_offset, class_id);
-  payload_offset += 2;
-  payload_length += 2;
+  // Primeiramente, monta argumentos do Method Frame  
 
-  write_short_int(payload, payload_offset, method_id);
-  payload_offset += 2;
-  payload_length += 2;
-
-  // Argumentos do payload
   unsigned char arguments[MAXSIZE];
-  unsigned long int arguments_length = 0;
-  int arguments_offset = 0;
+  unsigned long int arguments_offset = 0;
 
   unsigned char* consumer_tag = to_shortstr(_consumer_tag);
   unsigned long long int delivery_tag = 1;
@@ -893,174 +873,371 @@ int basic_deliver(unsigned char* frame, unsigned char* msg, int msg_length, char
   unsigned char* routing_key = to_shortstr(_queue_name);
 
   int n = 1 + strlen(_consumer_tag);
-  write_stream(arguments, consumer_tag, arguments_offset, n);
+  memcpy(arguments + arguments_offset, consumer_tag, n);
   arguments_offset += n;
-  arguments_length += n;
+  free(consumer_tag);
 
-  write_long_long_int(arguments, arguments_offset, delivery_tag);
-  arguments_offset += 8;
-  arguments_length += 8;
+  arguments_offset += write_long_long_int(arguments, arguments_offset, delivery_tag);
 
   arguments[arguments_offset] = redelivered;
   arguments_offset += 1;
-  arguments_length += 1;
 
   arguments[arguments_offset] = exchange;
   arguments_offset += 1;
-  arguments_length += 1;
 
   n = 1 + strlen(_queue_name);
-  write_stream(arguments, routing_key, arguments_offset, n);
+  memcpy(arguments + arguments_offset, routing_key, n);
   arguments_offset += n;
-  arguments_length += n;
+  free(routing_key);
 
-  write_stream(payload, arguments, payload_offset, arguments_length);
-  payload_offset += arguments_length;
-  payload_length += arguments_length;
+  unsigned long int arguments_size = arguments_offset;
 
-  // Payload montado, agora escreve no Method frame
+  // Arguments montado. Agora monta o payload do Method Frame
 
-  write_long_int(method_frame, method_frame_offset, payload_length);
-  method_frame_offset += 4;
-  method_frame_length += 4;
+  unsigned char payload[MAXSIZE];
+  unsigned long int payload_offset = 0;
 
-  write_stream(method_frame, payload, method_frame_offset, payload_length);
-  method_frame_offset += payload_length;
-  method_frame_length += payload_length;
+  unsigned short int class_id = 60; // Class Basic
+  unsigned short int method_id = 60; // Method Deliver
+  
+  unsigned long int payload_size = mount_method_frame_payload(payload, class_id, method_id, arguments, arguments_size);
 
-  method_frame[method_frame_offset] = 0xce;
-  method_frame_offset += 1;
-  method_frame_length += 1;
+  // Payload montado, agora monta o Method frame
+
+  unsigned char type = 1; // Method frame
+  unsigned short int channel = 1;
+
+  unsigned char method_frame[MAXSIZE];
+  unsigned long int method_frame_offset = mount_general_frame(method_frame, type, channel, payload, payload_size);
 
   // Method Frame do Basic.Deliver montado
 
   // Agora monta o Content header frame
   
-  // Parte do General frame
-  unsigned char content_header[MAXSIZE];
-  unsigned long int content_header_length = 0;
-  int content_header_offset = 0;
-
-  type = 0x2; // Tipo : Content header
-  channel = 0x1;
-
-  content_header[content_header_offset] = type;
-  content_header_offset += 1;
-  content_header_length += 1;
-
-  write_short_int(content_header, content_header_offset, channel);
-  content_header_offset += 2;
-  content_header_length += 2;
-
-  // Parte específica do Content Header
-  payload_length = 0;
+  // Primeiramente, monta payload do Content Header 
+  
   payload_offset = 0;
 
   class_id = 60; // Class Basic
 
-  write_short_int(payload, payload_offset, class_id);
-  payload_offset += 2;
-  payload_length += 2;
+  payload_offset += write_short_int(payload, payload_offset, class_id);
 
-  unsigned short int weight = 0; // Deve ser sempre 0
+  unsigned short int weight = 0; // Deve ser sempre 0 de acordo com a especifição do protocolo
   
-  write_short_int(payload, payload_offset, weight);
-  payload_offset += 2;
-  payload_length += 2;
+  payload_offset += write_short_int(payload, payload_offset, weight);
 
-  unsigned long long int body_size = msg_length; // Tamanho da mensagem
-  write_long_long_int(payload, payload_offset, body_size);
-  payload_offset += 8;
-  payload_length += 8;
+  unsigned long long int body_size = msg_size; // Tamanho da mensagem
+  payload_offset += write_long_long_int(payload, payload_offset, body_size);
 
   unsigned short int property_flags = 0x1000;
-  write_short_int(payload, payload_offset, property_flags);
-  payload_offset += 2;
-  payload_length += 2;
+  payload_offset += write_short_int(payload, payload_offset, property_flags);
 
   unsigned char delivery_mode = 1;
   payload[payload_offset] = delivery_mode;
   payload_offset += 1;
-  payload_length += 1;
 
-  // Payload montado, escreve agora no Content Header
+  // Payload montado, agora monta o Content Header
 
-  write_long_int(content_header, content_header_offset, payload_length);
-  content_header_offset += 4;
-  content_header_length += 4;
-
-  write_stream(content_header, payload, content_header_offset, payload_length);
-  content_header_offset += payload_length;
-  content_header_length += payload_length;
-
-  content_header[content_header_offset] = FRAME_END;
-  content_header_offset += 1;
-  content_header_length += 1;
+  type = 0x2; 
+  channel = 0x1;
   
+  unsigned char content_header[MAXSIZE];
+  payload_size = payload_offset;
+  unsigned long int content_header_offset = mount_general_frame(content_header, type, channel, payload, payload_size);
+
   // Content Header montado
 
-  // Montagem do Content Body. 
-  // Vou colocar toda a mensagem em um só frame. O certo seria analisar o tamanho máximo de um frame acordado pelo cliente e pelo servidor e dividir a mensagem se necessário. Como as mensagens aqui cabem em um só frame, farei isso.
+  // Montagem do Content Body. Vou colocar toda a mensagem em um só frame. O certo seria analisar o tamanho máximo de um frame acordado pelo cliente e pelo servidor e dividir a mensagem se necessário. Como as mensagens do EP cabem em um só frame, faço isso.
+  
+  // Primeiro, monta o payload do Content Body
+  // O payload de um Content Body é a própria mensagem
 
-  // General frame
-  unsigned char content_body[MAXSIZE];
-  unsigned long int content_body_length = 0;
-  int content_body_offset = 0;
-
-  type = 3; // Tipo : Content Body
-  channel = 1;
-
-  content_body[content_body_offset] = type;
-  content_body_offset += 1;
-  content_body_length += 1;
-
-  write_short_int(content_body, content_body_offset, channel);
-  content_body_offset += 2;
-  content_body_length += 2;
-
-  // Parte específica do Content Body
-
-  payload_length = 0;
   payload_offset = 0;
 
-  // O payload de um Content Body é a própria mensagem
-  write_stream(payload, msg, payload_offset, msg_length);
-  payload_offset += msg_length;
-  payload_length += msg_length;
+  memcpy(payload + payload_offset, msg, msg_size);
+  payload_offset += msg_size;
 
-  write_long_int(content_body, content_body_offset, payload_length);
-  content_body_offset += 4;
-  content_body_length += 4;
+  // Payload montado, de volta ao Content Body
 
-  write_stream(content_body, payload, content_body_offset, payload_length);
-  content_body_offset += payload_length;
-  content_body_length += payload_length;
+  type = 3; 
+  channel = 1;
 
-  content_body[content_body_offset] = FRAME_END;
-  content_body_offset += 1;
-  content_body_length += 1;
-  
+  unsigned char content_body[MAXSIZE];
+  payload_size = payload_offset;
+  unsigned long int content_body_offset = mount_general_frame(content_body, type, channel, payload, payload_size);
+
   // Content Body montado
 
   // Junta os três frames em um só 
     
-  unsigned long int frame_length = 0;
-  int frame_offset = 0;
+  unsigned long int dst_offset = 0;
 
-  write_stream(frame, method_frame, frame_offset, method_frame_length);
-  frame_offset += method_frame_length;
-  frame_length += method_frame_length;
+  unsigned long int method_frame_size = method_frame_offset;
+  memcpy(dst + dst_offset, method_frame, method_frame_size);
+  dst_offset += method_frame_size;
 
-  write_stream(frame, content_header, frame_offset, content_header_length);
-  frame_offset += content_header_length;
-  frame_length += content_header_length;
+  unsigned long int content_header_size = content_header_offset;
+  memcpy(dst + dst_offset, content_header, content_header_size);
+  dst_offset += content_header_size;
 
-  write_stream(frame, content_body, frame_offset, content_body_length);
-  frame_offset += content_body_length;
-  frame_length += content_body_length;
+  unsigned long int content_body_size = content_body_offset;
+  memcpy(dst + dst_offset, content_body, content_body_size);
+  dst_offset += content_body_size;
 
-  return frame_length;
+  // Devolve tamanho total do frame montado
+  unsigned long int dst_size = dst_offset;
+  return dst_size;
 }
 
+//int basic_deliver(unsigned char* frame, unsigned char* msg, int msg_length, char* _consumer_tag, char* _queue_name)
+//{
+//
+//  // Montagem do Method frame Basic.Deliver
+//  unsigned char method_frame[MAXSIZE];
+//  unsigned long int method_frame_length = 0;
+//  int method_frame_offset = 0;
+//
+//  // Parte do General Frame
+//  unsigned char type = 1; // Method frame
+//  unsigned short int channel = 1;
+//
+//  method_frame[method_frame_offset] = type;
+//  method_frame_offset += 1;
+//  method_frame_length += 1;
+//
+//  write_short_int(method_frame, method_frame_offset, channel);
+//  method_frame_offset += 2;
+//  method_frame_length += 2;
+//
+//  // Para espercífica do Method frame
+//  unsigned char payload[MAXSIZE];
+//  unsigned long int payload_length = 0;
+//  int payload_offset = 0;
+//
+//  unsigned short int class_id = 60; // Class Basic
+//  unsigned short int method_id = 60; // Method Deliver
+//  
+//  write_short_int(payload, payload_offset, class_id);
+//  payload_offset += 2;
+//  payload_length += 2;
+//
+//  write_short_int(payload, payload_offset, method_id);
+//  payload_offset += 2;
+//  payload_length += 2;
+//
+//  // Argumentos do payload
+//  unsigned char arguments[MAXSIZE];
+//  unsigned long int arguments_length = 0;
+//  int arguments_offset = 0;
+//
+//  unsigned char* consumer_tag = to_shortstr(_consumer_tag);
+//  unsigned long long int delivery_tag = 1;
+//  char redelivered = 0;
+//  char exchange = 0;
+//  unsigned char* routing_key = to_shortstr(_queue_name);
+//
+//  int n = 1 + strlen(_consumer_tag);
+//  write_stream(arguments, consumer_tag, arguments_offset, n);
+//  arguments_offset += n;
+//  arguments_length += n;
+//
+//  write_long_long_int(arguments, arguments_offset, delivery_tag);
+//  arguments_offset += 8;
+//  arguments_length += 8;
+//
+//  arguments[arguments_offset] = redelivered;
+//  arguments_offset += 1;
+//  arguments_length += 1;
+//
+//  arguments[arguments_offset] = exchange;
+//  arguments_offset += 1;
+//  arguments_length += 1;
+//
+//  n = 1 + strlen(_queue_name);
+//  write_stream(arguments, routing_key, arguments_offset, n);
+//  arguments_offset += n;
+//  arguments_length += n;
+//
+//  write_stream(payload, arguments, payload_offset, arguments_length);
+//  payload_offset += arguments_length;
+//  payload_length += arguments_length;
+//
+//  // Payload montado, agora escreve no Method frame
+//
+//  write_long_int(method_frame, method_frame_offset, payload_length);
+//  method_frame_offset += 4;
+//  method_frame_length += 4;
+//
+//  write_stream(method_frame, payload, method_frame_offset, payload_length);
+//  method_frame_offset += payload_length;
+//  method_frame_length += payload_length;
+//
+//  method_frame[method_frame_offset] = 0xce;
+//  method_frame_offset += 1;
+//  method_frame_length += 1;
+//
+//  // Method Frame do Basic.Deliver montado
+//
+//  // Agora monta o Content header frame
+//  
+//  // Parte do General frame
+//  unsigned char content_header[MAXSIZE];
+//  unsigned long int content_header_length = 0;
+//  int content_header_offset = 0;
+//
+//  type = 0x2; // Tipo : Content header
+//  channel = 0x1;
+//
+//  content_header[content_header_offset] = type;
+//  content_header_offset += 1;
+//  content_header_length += 1;
+//
+//  write_short_int(content_header, content_header_offset, channel);
+//  content_header_offset += 2;
+//  content_header_length += 2;
+//
+//  // Parte específica do Content Header
+//  payload_length = 0;
+//  payload_offset = 0;
+//
+//  class_id = 60; // Class Basic
+//
+//  write_short_int(payload, payload_offset, class_id);
+//  payload_offset += 2;
+//  payload_length += 2;
+//
+//  unsigned short int weight = 0; // Deve ser sempre 0
+//  
+//  write_short_int(payload, payload_offset, weight);
+//  payload_offset += 2;
+//  payload_length += 2;
+//
+//  unsigned long long int body_size = msg_length; // Tamanho da mensagem
+//  write_long_long_int(payload, payload_offset, body_size);
+//  payload_offset += 8;
+//  payload_length += 8;
+//
+//  unsigned short int property_flags = 0x1000;
+//  write_short_int(payload, payload_offset, property_flags);
+//  payload_offset += 2;
+//  payload_length += 2;
+//
+//  unsigned char delivery_mode = 1;
+//  payload[payload_offset] = delivery_mode;
+//  payload_offset += 1;
+//  payload_length += 1;
+//
+//  // Payload montado, escreve agora no Content Header
+//
+//  write_long_int(content_header, content_header_offset, payload_length);
+//  content_header_offset += 4;
+//  content_header_length += 4;
+//
+//  write_stream(content_header, payload, content_header_offset, payload_length);
+//  content_header_offset += payload_length;
+//  content_header_length += payload_length;
+//
+//  content_header[content_header_offset] = FRAME_END;
+//  content_header_offset += 1;
+//  content_header_length += 1;
+//  
+//  // Content Header montado
+//
+//  // Montagem do Content Body. 
+//  // Vou colocar toda a mensagem em um só frame. O certo seria analisar o tamanho máximo de um frame acordado pelo cliente e pelo servidor e dividir a mensagem se necessário. Como as mensagens aqui cabem em um só frame, farei isso.
+//
+//  // General frame
+//  unsigned char content_body[MAXSIZE];
+//  unsigned long int content_body_length = 0;
+//  int content_body_offset = 0;
+//
+//  type = 3; // Tipo : Content Body
+//  channel = 1;
+//
+//  content_body[content_body_offset] = type;
+//  content_body_offset += 1;
+//  content_body_length += 1;
+//
+//  write_short_int(content_body, content_body_offset, channel);
+//  content_body_offset += 2;
+//  content_body_length += 2;
+//
+//  // Parte específica do Content Body
+//
+//  payload_length = 0;
+//  payload_offset = 0;
+//
+//  // O payload de um Content Body é a própria mensagem
+//  write_stream(payload, msg, payload_offset, msg_length);
+//  payload_offset += msg_length;
+//  payload_length += msg_length;
+//
+//  write_long_int(content_body, content_body_offset, payload_length);
+//  content_body_offset += 4;
+//  content_body_length += 4;
+//
+//  write_stream(content_body, payload, content_body_offset, payload_length);
+//  content_body_offset += payload_length;
+//  content_body_length += payload_length;
+//
+//  content_body[content_body_offset] = FRAME_END;
+//  content_body_offset += 1;
+//  content_body_length += 1;
+//  
+//  // Content Body montado
+//
+//  // Junta os três frames em um só 
+//    
+//  unsigned long int frame_length = 0;
+//  int frame_offset = 0;
+//
+//  write_stream(frame, method_frame, frame_offset, method_frame_length);
+//  frame_offset += method_frame_length;
+//  frame_length += method_frame_length;
+//
+//  write_stream(frame, content_header, frame_offset, content_header_length);
+//  frame_offset += content_header_length;
+//  frame_length += content_header_length;
+//
+//  write_stream(frame, content_body, frame_offset, content_body_length);
+//  frame_offset += content_body_length;
+//  frame_length += content_body_length;
+//
+//  return frame_length;
+//}
 
+// Monta um general frame a partir dos parâmetros do frame (tipo, canal) e do payload e guarda em dst
+unsigned long int mount_general_frame (unsigned char* dst, unsigned char type, unsigned short int channel, unsigned char* payload, unsigned long int payload_size)
+{
+  unsigned long int dst_offset = 0;
+
+  dst[dst_offset] = type;
+  dst_offset += 1;
+
+  dst_offset += write_short_int(dst, dst_offset, channel);
+
+  dst_offset += write_long_int(dst, dst_offset, payload_size);
+
+  memcpy(dst + dst_offset, payload, payload_size);
+  dst_offset += payload_size;
+
+  dst[dst_offset] = FRAME_END;
+  dst_offset += 1;
+
+  return dst_offset;
+}
+
+// Monta o payload de um Method Frame a partir dos parâmtros do Method Frame (class_id, method_id, arguments) e guarda em dst
+unsigned long int mount_method_frame_payload (unsigned char* dst, unsigned short int class_id, unsigned short int method_id, unsigned char* arguments, unsigned long int arguments_size)
+{
+  unsigned long int dst_offset = 0;
+
+  dst_offset += write_short_int(dst, dst_offset, class_id);
+  dst_offset += write_short_int(dst, dst_offset, method_id);
+
+  memcpy(dst + dst_offset, arguments, arguments_size);
+  dst_offset += arguments_size;
+
+  return dst_offset;
+}
 

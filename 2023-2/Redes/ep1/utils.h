@@ -6,9 +6,11 @@ unsigned char* to_longstr(char* value);
 
 unsigned char* to_shortstr(char* value);
 
-void write_short_int(unsigned char* frame, int i, unsigned short int n);
+int write_short_int(unsigned char* frame, int i, unsigned short int n);
 
-void write_long_int(unsigned char* frame, int i, unsigned long int n);
+int write_long_int(unsigned char* frame, int i, unsigned long int n);
+
+int write_long_long_int(unsigned char* frame, int i, unsigned long long int n);
 
 void write_stream(unsigned char* frame, unsigned char* buffer, int i, int n);
 
@@ -52,7 +54,6 @@ int basic_consume_ok(unsigned char* frame, char* _consumer_tag);
 
 int basic_deliver(unsigned char* frame, unsigned char* msg, int msg_length, char* _consumer_tag, char* _queue_name);
 
+unsigned long int mount_general_frame (unsigned char* dst, unsigned char type, unsigned short int channel, unsigned char* payload, unsigned long int payload_size);
 
-
-
-
+unsigned long int mount_method_frame_payload (unsigned char* dst, unsigned short int class_id, unsigned short int method_id, unsigned char* arguments, unsigned long int arguments_size);
