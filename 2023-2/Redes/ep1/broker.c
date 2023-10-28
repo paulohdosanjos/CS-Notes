@@ -10,18 +10,39 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include <unistd.h>
+#include <pthread.h>
 
-#include "config.h"
+#include "server_config.h"
 #include "state_machine.h"
 #include "utils.h"
 
+// Lista global de filas do servidor
+server_data _server_data;
+
+//server_data* _server_data = (server_data*) malloc(sizeof(server_data));
+//_server_data->queue_list_size = 0;
+
+void *handle_client(void* __client_thread) 
+{
+  client_thread* _client_thread = (client_thread*) __client_thread;
+  printf("entrei na main da thread %lu\n", _client_thread->thread_id);
+
+  _client_thread->current_state = INICIAL_STATE;
+  //printf("ESTADO INICAL: %s\n", state_name[current_state]);
+  int n;
+  while(_client_thread->current_state != FINAL)
+  {
+    n = (*actions[_client_thread->current_state])(_client_thread, &_server_data);
+    //printf("CODE : %d\n", n);
+    _client_thread->current_state = transitions[_client_thread->current_state][n];
+    //printf("ESTADO : %s\n", state_name[current_state]);
+  }
+  return NULL;
+}
 
 int main (int argc, char **argv) {
     int listenfd, connfd;
     struct sockaddr_in servaddr;
-    pid_t childpid;
-    char recvline[MAXLINE + 1];
-    ssize_t n;
    
     if (argc != 2) {
         fprintf(stderr,"Uso: %s <Porta>\n",argv[0]);
@@ -54,37 +75,33 @@ int main (int argc, char **argv) {
 
     printf("[Servidor no ar. Aguardando conexões na porta %s]\n",argv[1]);
     printf("[Para finalizar, pressione CTRL+c ou rode um kill ou killall]\n");
-   
-    for (;;) {
-   
-        if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
-            perror("accept :(\n");
-            exit(5);
-        }
 
-        close(listenfd);
+    _server_data = *((server_data *) malloc(sizeof(server_data)));
+    printf("lista de filas alocada com sucesso\n");
 
-        server_data* data = (server_data*) malloc(sizeof(server_data));
-        data->connfd = connfd;
-        data->queue_list_size = 0;
+    for (int thread_count = 0; ; thread_count = (thread_count + 1) % MAX_CLIENTS) {
 
-        state current_state = INICIAL_STATE;
-        printf("ESTADO INICAL: %s\n", state_name[current_state]);
-        int n;
-        while(current_state != FINAL)
-        {
-          n = (*actions[current_state])(data);
-          printf("CODE : %d\n", n);
-          current_state = transitions[current_state][n];
-          printf("ESTADO : %s\n", state_name[current_state]);
-        }
-    
-        for(;;){}
+      if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
+          perror("accept :(\n");
+          exit(5);
+      }
 
-        close(connfd);
-        printf("[Uma conexão fechada]\n");
-        //exit(0);
+      printf("[Uma conexão aberta]\n");
 
-    }
-    exit(0);
+      client_thread* _client_thread = (client_thread*) malloc(sizeof(client_thread));
+      _client_thread->thread_id = thread_count;
+      _client_thread->connfd = connfd;
+      pthread_create(&_client_thread->thread_id, NULL, handle_client,_client_thread);
+      
+      printf("Filas no final:\n");
+      printf("num filas = %d\n", _server_data.queue_list_size);
+      for(int i = 0; i < _server_data.queue_list_size; i++)
+      {
+        print_queue(_server_data.queue_list[i]);
+      }
+
+      printf("[Uma conexão fechada]\n");
+  }
+
+  exit(0);
 }

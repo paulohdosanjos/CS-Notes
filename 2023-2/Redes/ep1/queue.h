@@ -39,5 +39,8 @@ void dequeue_queue(queue* q, char* buf);
 // Deleta fila q
 void remove_queue(queue* q);
 
+// Imprime fila
+void print_queue(queue* q);
+
 #endif
 

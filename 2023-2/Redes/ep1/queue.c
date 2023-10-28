@@ -59,3 +59,16 @@ void remove_queue(queue* q)
   }
   free(q);
 }
+
+void print_queue(queue* q)
+{
+  printf("***************\n");
+  printf("%s (%d) :\n", q->name, q->size);
+  node* x = q->first;
+  while(x != NULL)
+  {
+    puts(x->message);
+    x = x->next;
+  }
+  printf("***************\n");
+}
