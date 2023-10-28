@@ -48,6 +48,10 @@ int basic_publish (unsigned char* frame, char* _exchange_name, char* _routing_ke
 
 int queue_declare_ok(unsigned char* frame, char* _queue_name);
 
+int basic_consume_ok(unsigned char* frame, char* _consumer_tag);
+
+int basic_deliver(unsigned char* frame, unsigned char* msg, int msg_length, char* _consumer_tag, char* _queue_name);
+
 
 
 

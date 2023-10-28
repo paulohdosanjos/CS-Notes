@@ -17,6 +17,8 @@ int (*actions[NUM_STATES])(client_thread*, server_data*) = {
   do_WAIT_COMMAND,
   do_RCVD_QUEUE_DECLARE, 
   do_RCVD_BASIC_PUBLISH,
+  do_RCVD_BASIC_CONSUME,
+  do_WAIT_BASIC_ACK,
   do_WAIT_CHANNEL_CLOSE, 
   do_RCVD_CHANNEL_CLOSE, 
   do_WAIT_CONNECTION_CLOSE,
@@ -34,9 +36,11 @@ state transitions[NUM_STATES][MAX_TRANSITIONS] = {
   {WAIT_CHANNEL_OPEN}, // RCVD_CONNECTION_OPEN, 
   {RCVD_CHANNEL_OPEN}, // WAIT_CHANNEL_OPEN, 
   {WAIT_COMMAND}, // RCVD_CHANNEL_OPEN, 
-  {RCVD_QUEUE_DECLARE, RCVD_QUEUE_DECLARE}, // WAIT_COMMAND, 
+  {RCVD_QUEUE_DECLARE, RCVD_BASIC_PUBLISH, RCVD_BASIC_CONSUME}, // WAIT_COMMAND, 
   {WAIT_CHANNEL_CLOSE}, // RCVD_QUEUE_DECLARE, 
-  {WAIT_CHANNEL_CLOSE}, // RCVD_BASIC_PUBLISH, 
+  {WAIT_CHANNEL_CLOSE, RCVD_CONNECTION_CLOSE}, // RCVD_BASIC_PUBLISH, 
+  {WAIT_BASIC_ACK}, // RCVD_BASIC_CONSUME, 
+  {FINAL}, // WAIT_BASIC_ACK, 
   {RCVD_CHANNEL_CLOSE}, // WAIT_CHANNEL_CLOSE, 
   {WAIT_CONNECTION_CLOSE}, // RCVD_CHANNEL_CLOSE, 
   {RCVD_CONNECTION_CLOSE}, // WAIT_CONNECTION_CLOSE,
@@ -56,6 +60,9 @@ char* state_name[NUM_STATES] = {
   "RCVD_CHANNEL_OPEN", 
   "WAIT_COMMAND", 
   "RCVD_QUEUE_DECLARE", 
+  "RCVD_BASIC_PUBLISH", 
+  "RCVD_BASIC_CONSUME", 
+  "WAIT_BASIC_ACK", 
   "WAIT_CHANNEL_CLOSE", 
   "RCVD_CHANNEL_CLOSE", 
   "WAIT_CONNECTION_CLOSE",
@@ -170,29 +177,26 @@ int do_RCVD_CHANNEL_OPEN(client_thread* data, server_data* _server_data)
 }
 
 // Nesse estado, o servidor pode receber um declare_queue, publish ou consume
-int do_WAIT_COMMAND (client_thread* data, server_data* _server_data)
-{
+int do_WAIT_COMMAND (client_thread* data, server_data* _server_data) {
   int bytes_read = read_frame(data->connfd, data->buf);
+  data->bytes_read = bytes_read;
 
   unsigned short int method_id = data->buf[METHOD_ID_POSITION];
   // Faz transição interna
   switch (method_id) 
   {
     case DECLARE_ID:
-      //data->current_state = RCVD_QUEUE_DECLARE;
       printf("Queue.Declare recebido\n");
       return 0;
       break;
 
     case PUBLISH_ID:
       printf("Basic.Publish recebido\n");
-      //data->current_state = RCVD_BASIC_PUBLISH;
       return 1;
       break;
 
     case CONSUME_ID:
       printf("Basic.Consume recebido\n");
-      //data->current_state = RCVD_BASIC_CONSUME;
       return 2;
       break;
 
@@ -240,7 +244,7 @@ int do_RCVD_QUEUE_DECLARE(client_thread* data, server_data* _server_data)
   return 0;
 }
 
-// Servidor recebeu um Basic.Publish. Escrever mensagem na fila somente
+// Servidor recebeu um Basic.Publish. Escreve mensagem na fila somente. Pode ter rebebido um Channel.Close também
 int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
 {
   int n;
@@ -249,17 +253,106 @@ int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
   // Extrai nome da fila
   char routing_key[MAXLINE];
   int routing_key_size = data->buf[ROUTING_KEY_SIZE_POSITION];
-  memcpy(routing_key, data->buf + ROUTING_KEY_SIZE_POSITION, routing_key_size);
+  memcpy(routing_key, data->buf + ROUTING_KEY_SIZE_POSITION + 1, routing_key_size);
   routing_key[routing_key_size] = 0;
 
   printf("nome da fila extraído : ");
   puts(routing_key);
 
-  n = basic_publish(data->buf, exchange_name, routing_key);
+  // Extrai mensagem
+  int count = 0;
+  int i;
+  for(i = 0; i < data->bytes_read && count < 2; i++) // Extrai Method frame e o content header, o restante é o content body
+  {
+    if(data->buf[i] == FRAME_END) count++;   
+  }
+
+  i+=3; // Começo do length do content body
+  unsigned char a,b,c,d;
+  a = data->buf[i++];
+  b = data->buf[i++];
+  c = data->buf[i++];
+  d = data->buf[i++];
+  printf("a = %d\n", a);
+  printf("b = %d\n", b);
+  printf("c = %d\n", c);
+  printf("d = %d\n", d);
+  int content_body_length = d + (c << 2) + (b << 4) + (a << 6);
+  printf("content length = %d\n", content_body_length);
+
+  // Recupera mensagem
+  char msg[MAX_MSG_LENGTH];
+  for(int j = 0; j < content_body_length; j++) 
+    msg[j] = data->buf[i+j];
+  
+  msg[content_body_length] = 0;
+
+  // Como só há 8 filas, posso percorrer a lista de filas para achar a fila correspondente
+  for(i = 0; i < _server_data->queue_list_size; i++)
+    if(strcmp(_server_data->queue_list[i]->name, routing_key) == 0) break;
+
+  enqueue_queue(_server_data->queue_list[i], msg);
+
+  printf("Mensagem publicada na fila %s\n", _server_data->queue_list[i]->name);
+
+  count = 0;
+  for(i = 0; i < data->bytes_read; i++) // Extrai Method frame e o content header, o restante é o content body
+  {
+    if(data->buf[i] == FRAME_END) count++;   
+  }
+
+  printf("count = %d\n", count);
+
+  if(count == 4) // Recebeu Channel.Close junto
+   return 1;
+  else return 0;
+}
+
+// Servidor envia Basic.Consume-Ok e Basic.Deliver
+int do_RCVD_BASIC_CONSUME (client_thread* data, server_data* _server_data)
+{
+  // Extrai nome da fila a partir do pacote do cliente Basic.Consume
+  char routing_key[MAXLINE];
+  int routing_key_size = data->buf[13];
+  memcpy(routing_key, data->buf + 13 + 1, routing_key_size);
+  routing_key[routing_key_size] = 0;
+
+  printf("Nome da fila extraído : ");
+  puts(routing_key);
+
+  // Envia o Basic.Consume-Ok
+  int n;
+  char* consumer_tag = "foo_consgumer";
+  n = basic_consume_ok(data->buf, consumer_tag);
   write(data->connfd, data->buf, n);
 
-  printf("Mensagem publicada\n");
-  return 0;
+  printf("Basic.Consume-Ok enviado\n");
+
+  // Desempilha mensagem da fila requerida
+  
+  // Como só há 8 filas, posso percorrer a lista de filas para achar a fila correspondente
+
+  int i;
+  for(i = 0; i < _server_data->queue_list_size; i++)
+    if(strcmp(_server_data->queue_list[i]->name, routing_key) == 0) break;
+  char msg[MAXLINE];
+  dequeue_queue(_server_data->queue_list[i], msg);
+
+  printf("Mensagem resgatada na fila %s\n", msg);
+
+  // Envia o Basic.Deliver
+  n = basic_deliver(data->buf, (unsigned char*) msg, strlen(msg), consumer_tag, routing_key);
+  write(data->connfd, data->buf, n);
+
+  printf("Basic.Deliver enviado\n");
+
+  return 0; 
+}
+
+// Servidor recebe Basic.Ack do cliente
+int do_WAIT_BASIC_ACK (client_thread* data, server_data* _server_data)
+{
+
 }
 
 // Servidor recebe Channel.Close do cliente

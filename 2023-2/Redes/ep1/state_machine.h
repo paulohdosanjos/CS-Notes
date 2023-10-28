@@ -19,7 +19,7 @@
 #include "server_config.h"
 #include "queue.h"
 
-#define MAX_TRANSITIONS 2
+#define MAX_TRANSITIONS 3
 #define QUEUE_NAME_LENGTH_OFFSET 13
 #define ROUTING_KEY_SIZE_POSITION 14
 
@@ -51,6 +51,10 @@ int do_WAIT_COMMAND (client_thread* data, server_data*);
 int do_RCVD_QUEUE_DECLARE (client_thread* data, server_data*);
 
 int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data*);
+
+int do_RCVD_BASIC_CONSUME (client_thread* data, server_data*);
+
+int do_WAIT_BASIC_ACK (client_thread* data, server_data*);
 
 int do_WAIT_CHANNEL_CLOSE (client_thread* data, server_data*);
 
