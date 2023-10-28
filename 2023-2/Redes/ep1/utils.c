@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 #include "utils.h"
-#include "config.h"
+#include "server_config.h"
 
 // Lê um frame do socket e escreve em buf
 int read_frame (int connfd, unsigned char* buf)
@@ -759,3 +759,72 @@ int queue_declare_ok(unsigned char* frame, char* _queue_name)
 
   return frame_length;
 }
+
+int basic_publish (unsigned char* frame, char* _exchange_name, char* _routing_key)
+{
+  unsigned long int frame_length = 0;
+  int frame_offset = 0;
+
+  // General Frame
+  unsigned char type = 0x1; // Method frame
+  unsigned short int channel = 0x1;
+
+  frame[frame_offset] = type;
+  frame_offset += 1;
+  frame_length += 1;
+
+  write_short_int(frame, frame_offset, channel);
+  frame_offset += 2;
+  frame_length += 2;
+
+  // Method frame
+  unsigned char method_frame[MAXSIZE];
+  unsigned long int method_frame_length = 0;
+  int method_frame_offset = 0;
+
+  unsigned short int class_id = 60; // Class Basic
+  unsigned short int method_id = 41; // Method Publish
+  
+  write_short_int(method_frame, method_frame_offset, class_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  write_short_int(method_frame, method_frame_offset, method_id);
+  method_frame_offset += 2;
+  method_frame_length += 2;
+
+  // Argumentos
+  unsigned char arguments[MAXSIZE];
+  unsigned long int arguments_length = 0;
+  int arguments_offset = 0;
+
+  unsigned char reserved_1 = 0x00;
+  unsigned char* exchange_name = to_shortstr(_exchange_name);
+  unsigned char* routing_key = to_shortstr(_routing_key);
+  unsigned char mandatory = 0;
+  unsigned char immediate = 0;
+
+  arguments[arguments_offset] = reserved_1;
+  arguments_offset += 1;
+  arguments_length += 1;
+
+  write_stream(method_frame, arguments, method_frame_offset, arguments_length);
+  method_frame_offset += arguments_length;
+  method_frame_length += arguments_length;
+
+  write_long_int(frame, frame_offset, method_frame_length);
+  frame_offset += 4;
+  frame_length += 4;
+
+  write_stream(frame, method_frame, frame_offset, method_frame_length);
+  frame_offset += method_frame_length;
+  frame_length += method_frame_length;
+
+  frame[frame_offset] = FRAME_END;
+  frame_offset += 1;
+  frame_length += 1;
+
+  return frame_length;
+}
+
+

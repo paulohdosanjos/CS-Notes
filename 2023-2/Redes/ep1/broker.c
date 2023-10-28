@@ -33,10 +33,20 @@ void *handle_client(void* __client_thread)
   while(_client_thread->current_state != FINAL)
   {
     n = (*actions[_client_thread->current_state])(_client_thread, &_server_data);
-    //printf("CODE : %d\n", n);
+    printf("CODE : %d\n", n);
     _client_thread->current_state = transitions[_client_thread->current_state][n];
-    //printf("ESTADO : %s\n", state_name[current_state]);
+    printf("ESTADO : %s\n", state_name[_client_thread->current_state]);
   }
+  
+  printf("Filas no servidor:\n");
+  printf("num filas = %d\n", _server_data.queue_list_size);
+  for(int i = 0; i < _server_data.queue_list_size; i++)
+  {
+    print_queue(_server_data.queue_list[i]);
+  }
+
+  close(_client_thread->connfd);
+  printf("[Uma conexão fechada]\n");
   return NULL;
 }
 
@@ -80,7 +90,8 @@ int main (int argc, char **argv) {
     printf("lista de filas alocada com sucesso\n");
 
     for (int thread_count = 0; ; thread_count = (thread_count + 1) % MAX_CLIENTS) {
-
+      
+      
       if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
           perror("accept :(\n");
           exit(5);
@@ -92,15 +103,6 @@ int main (int argc, char **argv) {
       _client_thread->thread_id = thread_count;
       _client_thread->connfd = connfd;
       pthread_create(&_client_thread->thread_id, NULL, handle_client,_client_thread);
-      
-      printf("Filas no final:\n");
-      printf("num filas = %d\n", _server_data.queue_list_size);
-      for(int i = 0; i < _server_data.queue_list_size; i++)
-      {
-        print_queue(_server_data.queue_list[i]);
-      }
-
-      printf("[Uma conexão fechada]\n");
   }
 
   exit(0);

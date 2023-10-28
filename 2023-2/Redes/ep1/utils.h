@@ -44,6 +44,8 @@ int channel_open_ok (unsigned char* frame);
 
 int channel_close_ok (unsigned char* frame);
 
+int basic_publish (unsigned char* frame, char* _exchange_name, char* _routing_key);
+
 int queue_declare_ok(unsigned char* frame, char* _queue_name);
 
 
