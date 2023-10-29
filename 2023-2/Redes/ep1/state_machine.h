@@ -19,13 +19,15 @@
 #include "server_config.h"
 #include "queue.h"
 
-#define MAX_TRANSITIONS 3
-#define QUEUE_NAME_LENGTH_OFFSET 13
-#define ROUTING_KEY_SIZE_POSITION 14
+#define MAX_TRANSITIONS 3 // Número máximo de transições distintas possíveis em um estado
+#define QUEUE_NAME_LENGTH_OFFSET 13 // Posição no frame de Queue.Declare / Basic.Consume onde começa o tamanho do nome da fila
+#define ROUTING_KEY_SIZE_POSITION 14 // Posição no frame de Basic.Publish onde começa a routing_key do comando
 
 extern int (*actions[NUM_STATES])(client_thread*, server_data*);
 extern state transitions[NUM_STATES][MAX_TRANSITIONS];
 extern char* state_name[NUM_STATES];
+
+// Para cada estado STATE, há uma função do_STATE() definindo o comportamento do servidor nesse estado
 
 int do_WAIT_HEADER (client_thread* data, server_data*);
 
@@ -55,7 +57,7 @@ int do_RCVD_BASIC_CONSUME (client_thread* data, server_data*);
 
 int do_SUBSCRIBED (client_thread* data, server_data*);
 
-int do_MY_TURN (client_thread* data, server_data*);
+int do_CLIENT_TURN (client_thread* data, server_data*);
 
 int do_WAIT_BASIC_ACK (client_thread* data, server_data*);
 

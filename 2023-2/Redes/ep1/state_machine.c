@@ -2,6 +2,8 @@
 #include "utils.h"
 #include "hardcoded.h"
 
+// Array que mapeia estados para ações, ou seja, o comportamento do servidor em cada estado
+
 int (*actions[NUM_STATES])(client_thread*, server_data*) = {
   do_WAIT_HEADER,
   do_RCVD_HEADER, 
@@ -17,7 +19,7 @@ int (*actions[NUM_STATES])(client_thread*, server_data*) = {
   do_RCVD_BASIC_PUBLISH,
   do_RCVD_BASIC_CONSUME,
   do_SUBSCRIBED,
-  do_MY_TURN,
+  do_CLIENT_TURN,
   do_WAIT_BASIC_ACK,
   do_WAIT_CHANNEL_CLOSE, 
   do_RCVD_CHANNEL_CLOSE, 
@@ -25,6 +27,8 @@ int (*actions[NUM_STATES])(client_thread*, server_data*) = {
   do_RCVD_CONNECTION_CLOSE,
   do_FINAL
 };
+
+// Array de transições. Cada função actions[i] retorna um código que sinaliza para qual estado o servidor deve ir
 
 state transitions[NUM_STATES][MAX_TRANSITIONS] = {
   {RCVD_HEADER, WAIT_HEADER}, // WAIT_HEADER,
@@ -40,16 +44,17 @@ state transitions[NUM_STATES][MAX_TRANSITIONS] = {
   {WAIT_CHANNEL_CLOSE}, // RCVD_QUEUE_DECLARE, 
   {WAIT_CHANNEL_CLOSE, RCVD_CONNECTION_CLOSE}, // RCVD_BASIC_PUBLISH, 
   {SUBSCRIBED}, // RCVD_BASIC_CONSUME, 
-  {MY_TURN}, // SUBSCRIBED, 
-  {WAIT_BASIC_ACK, SUBSCRIBED}, // MY_TURN, 
+  {CLIENT_TURN}, // SUBSCRIBED, 
+  {WAIT_BASIC_ACK, SUBSCRIBED}, // CLIENT_TURN, 
   {SUBSCRIBED}, // WAIT_BASIC_ACK, 
   {RCVD_CHANNEL_CLOSE}, // WAIT_CHANNEL_CLOSE, 
   {WAIT_CONNECTION_CLOSE}, // RCVD_CHANNEL_CLOSE, 
   {RCVD_CONNECTION_CLOSE}, // WAIT_CONNECTION_CLOSE,
   {FINAL}, // RCVD_CONNECTION_CLOSE
-  {FINAL}        // FINAL
+  {FINAL}  // FINAL
 };
 
+// Mapeamento estado (um inteiro) para nome do estado. Usado para fins de depuração
 char* state_name[NUM_STATES] = {
   "WAIT_HEADER",
   "RCVD_HEADER", 
@@ -65,7 +70,7 @@ char* state_name[NUM_STATES] = {
   "RCVD_BASIC_PUBLISH", 
   "RCVD_BASIC_CONSUME", 
   "SUBSCRIBED", 
-  "MY_TURN", 
+  "CLIENT_TURN", 
   "WAIT_BASIC_ACK", 
   "WAIT_CHANNEL_CLOSE", 
   "RCVD_CHANNEL_CLOSE", 
@@ -117,7 +122,7 @@ int do_RCVD_START_OK (client_thread* data, server_data* _server_data)
   return 0;
 }
 
-// Servidor bloqueia até receber um Connection.Tune-Ok do cliente. Não valida. Como logo em seguida ele deverá receber um Connection.Open, é possível que o socketcontenha os dois. Retorna 1 nesse caso e 0 caso contrário. 
+// Servidor bloqueia até receber um Connection.Tune-Ok do cliente. Não valida. Como logo em seguida ele deverá receber um Connection.Open, é possível que o socket contenha os dois frames correspondentes a esses comandos. Retorna 1 nesse caso e 0 caso contrário. 
 
 int do_WAIT_TUNE_OK (client_thread* data, server_data* _server_data)
 {
@@ -210,17 +215,17 @@ int do_WAIT_COMMAND (client_thread* data, server_data* _server_data)
   }
 }
 
-// Servidor cria nova fila e envia Queue.Declare-Ok para o cliente. Se o servidor está nesse estado, os dados da fila estão em data->buf devido ao comando Queue.Declare enviado pelo cliente. Caso alguma fila com esse nome já exista, o servidor retorna apenas.
+// Servidor recebe solicitação de criação de fila e envia Queue.Declare-Ok para o cliente. Se o servidor está nesse estado, os dados da fila estão em data->buf devido ao comando Queue.Declare enviado pelo cliente. Caso alguma fila com esse nome já exista, o servidor continua.
 
 int do_RCVD_QUEUE_DECLARE (client_thread* data, server_data* _server_data)
 {
-  // Extrai nome da fila
+  // Extrai nome da fila 
   int queue_name_size = data->buf[QUEUE_NAME_LENGTH_OFFSET];
   char queue_name[MAXLINE];
   memcpy(queue_name, data->buf + QUEUE_NAME_LENGTH_OFFSET + 1, queue_name_size);
   queue_name[queue_name_size] = 0;
 
-  // Verifica se a fila já está presente. Como teremos no máximo 8 filas a qualquer instante, é razoável procurar por filas pelo seu nome
+  // Verifica se a fila já existe no servidor. Como teremos no máximo 8 filas a qualquer instante, é aceitável procurar pela fila pelo seu nome na lista de filas do servidor
 
   int is_present = FALSE;
   for(int i = 0; i < _server_data->queue_list_size; i++) 
@@ -232,7 +237,7 @@ int do_RCVD_QUEUE_DECLARE (client_thread* data, server_data* _server_data)
     _server_data->queue_list_size++;
     _server_data->queue_list[_server_data->queue_list_size-1] = q;
 
-    printf("nova fila criada, num_filas = %d\n", _server_data->queue_list_size);
+    printf("nova fila criada, número de filas = %d\n", _server_data->queue_list_size);
   }
   
   // Envia Queue.Declare-Ok para o cliente
@@ -245,7 +250,7 @@ int do_RCVD_QUEUE_DECLARE (client_thread* data, server_data* _server_data)
   return 0;
 }
 
-// Servidor recebeu um Basic.Publish. Escreve mensagem na fila somente. Pode ter rebebido um Channel.Close também. Não trata erros do tipo, fila inexistente, etc.Outro ponto importante é que aqui assumimos que a mensagem será enviada em somente um Content Body. Isso é verdade para o limite do tamanho das mensagens estabelecido. Mas um programa mais robusto deveria verificar isso.
+// Servidor recebeu um Basic.Publish. Escreve mensagem recebida na fila corresponed. Pode ter recebido um Channel.Close também. Não trata erros do tipo, fila inexistente, etc. Outro ponto importante é que aqui assumimos que a mensagem será enviada pelo servidor em somente um Content Body. Isso é verdade para o limite do tamanho das mensagens estabelecido. Mas um programa mais robusto deveria verificar isso.
 
 int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
 {
@@ -253,13 +258,13 @@ int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
   char* exchange_name = "foo"; // Não usamos exchanges. Se o cliente não especificar nenhum exchange, esse campo será 0x00 no frame. Estamos pressupondo isso aqui.
 
   // Extrai nome da fila 
-  char routing_key[MAXLINE];
-  int routing_key_size = data->buf[ROUTING_KEY_SIZE_POSITION];
-  memcpy(routing_key, data->buf + ROUTING_KEY_SIZE_POSITION + 1, routing_key_size);
-  routing_key[routing_key_size] = 0;
+  char queue_name[MAXLINE];
+  int queue_name_size = data->buf[ROUTING_KEY_SIZE_POSITION];
+  memcpy(queue_name, data->buf + ROUTING_KEY_SIZE_POSITION + 1, queue_name_size);
+  queue_name[queue_name_size] = 0;
 
   printf("nome da fila extraído : ");
-  puts(routing_key);
+  puts(queue_name);
 
   // Extrai mensagem
 
@@ -270,7 +275,7 @@ int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
   for(i = 0; i < data->bytes_read && count < 2; i++) 
     if(data->buf[i] == FRAME_END) count++;   
   
-  i+=3; // i aponta para o começo do campo length do Content body
+  i+=3; // i agora aponta para o começo do campo length do Content body
 
   // Extrai tamanho do Content body
 
@@ -285,14 +290,15 @@ int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
   memcpy(msg, data->buf + i, content_body_length);
   msg[content_body_length] = 0;
 
+  // Procura pela fila na lista de filas do servidor
   for(i = 0; i < _server_data->queue_list_size; i++)
-    if(strcmp(_server_data->queue_list[i]->name, routing_key) == 0) break;
+    if(strcmp(_server_data->queue_list[i]->name, queue_name) == 0) break;
 
-  enqueue_queue(_server_data->queue_list[i], msg);
+  enqueue_queue(_server_data->queue_list[i], msg); // Empilha mensagem
 
   printf("Mensagem publicada na fila %s\n", _server_data->queue_list[i]->name);
 
-  // Agora, vamos verificar se o Channel.Close foi lido junto no socket. Supomos que o Basic.Publish veio em 3 frames
+  // Agora, vamos verificar se o Channel.Close foi lido junto no socket. Supomos que o Basic.Publish veio em 3 frames, confome descrito em cima da assinatura dessa função
   count = 0;
   for(i = 0; i < data->bytes_read; i++)
     if(data->buf[i] == FRAME_END) count++;   
@@ -302,29 +308,28 @@ int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
   else return 0;
 }
 
-// Servidor inscreve cliente na fila requerida e envia Basic.Consume-Ok. 
+// Servidor inscreve cliente na fila requerida e envia Basic.Consume-Ok. Não verifica se a fila de fato existe. 
 int do_RCVD_BASIC_CONSUME (client_thread* data, server_data* _server_data)
 {
   // Extrai nome da fila a partir do pacote do cliente Basic.Consume
-  char routing_key[MAXLINE];
-  int routing_key_size = data->buf[13];
-  memcpy(routing_key, data->buf + 13 + 1, routing_key_size);
-  routing_key[routing_key_size] = 0;
+  char queue_name[MAXLINE];
+  int queue_name_size = data->buf[QUEUE_NAME_LENGTH_OFFSET];
+  memcpy(queue_name, data->buf + QUEUE_NAME_LENGTH_OFFSET + 1, queue_name_size);
+  queue_name[queue_name_size] = 0;
 
   printf("Nome da fila extraído : ");
-  puts(routing_key);
+  puts(queue_name);
 
-  // Inscreve cliente nessa fila. Primeiramente, acha índice dessa listana lista de filas
+  // Inscreve cliente nessa fila. Primeiramente, acha índice dessa fila na lista de filas do servidor. Não verifica se o cliente já está inscrito na fila. Se um cliente for conectado mais de uma vez na mesma fila, o efeito é que ele receberá mais um "quanta" no round robin, e ele poderá receber duas mensagens na sua vez de consumir. Entretanto, esse comportamento não é o comportamento padrão de um servidor AMQP, portanto, isso não deve ser feito pelo cliente utilizando esse servidor simplificado.
 
   int i;
   for(i = 0; i < _server_data->queue_list_size; i++)
-    if(strcmp(_server_data->queue_list[i]->name, routing_key) == 0) break;
+    if(strcmp(_server_data->queue_list[i]->name, queue_name) == 0) break;
 
   data->client_queue = i; // Guarda em qual fila cliente está inscrito
   _server_data->num_consumers++;
 
-
-  if(_server_data->client_queue[i] == NULL) // Ainda não foi criada a lista de clientes dessa fila
+  if(_server_data->client_queue[i] == NULL) // Ainda não foi criada a lista de clientes dessa fila. Primeiro cliente conectado
   {
     _server_data->client_queue[i] = create_queue("foo");
     printf("não tinha ninguém inscrito nessa fila ainda, fila de clientes alocada\n");
@@ -351,28 +356,27 @@ int do_RCVD_BASIC_CONSUME (client_thread* data, server_data* _server_data)
   return 0; 
 }
 
-// Servidor verifica se é a vez do cliente de consumir uma mensagem da fila que ele está inscrito. Fica em loop verificando essa condição até que ela seja verdadeira e o servidor transite para o MY_TURN, onde o cliente receberá a mensagem
+// Servidor verifica se é a vez do cliente de consumir uma mensagem na fila em que ele está inscrito. Fica em loop verificando essa condição até que ela seja verdadeira e o servidor transite para o estado CLIENT_TURN, onde o cliente efetivamente receberá a mensagem
 
 int do_SUBSCRIBED(client_thread *data, server_data* _server_data)
 {
   while(1)
   {
-    // Verifica se é sua vez de consumir
-    queue* q = _server_data->queue_list[data->client_queue]; // Fila que o cliente está inscrito
-    printf("fila que esse cliente está inscrito : %s\n", q->name);
-    char buf[MAX_MSG_LENGTH]; // Consumer tag do próximo cliente a consumir na fila q
-    memset(buf, 0, MAX_MSG_LENGTH);
-    queue* q_client = _server_data->client_queue[data->client_queue];
-    if(size_queue(q_client) == 0) printf("putz\n");
-    first_queue(q_client, buf);
+    queue* q = _server_data->queue_list[data->client_queue];
+    //printf("fila que esse cliente está inscrito : %s\n", q->name);
 
-    printf("o próximo cliente a consumir nessa fila é : %s\n", buf);
-    char consumer_tag[MAX_MSG_LENGTH];
-    memset(consumer_tag, 0, MAX_MSG_LENGTH);
-    sprintf(consumer_tag, "%lu", data->thread_id);
-    if(strcmp(buf, consumer_tag) == 0) // Vez do cliente :)
+    char next_client_to_consume[MAX_MSG_LENGTH]; // Consumer tag do próximo cliente a consumir na fila q
+    memset(next_client_to_consume, 0, MAX_MSG_LENGTH);
+    queue* q_client = _server_data->client_queue[data->client_queue];
+    first_queue(q_client, next_client_to_consume);
+
+    //printf("o próximo cliente a consumir nessa fila é : %s\n", buf);
+    char client_consumer_tag[MAX_MSG_LENGTH];
+    memset(client_consumer_tag, 0, MAX_MSG_LENGTH);
+    sprintf(client_consumer_tag, "%lu", data->thread_id);
+    if(strcmp(next_client_to_consume, client_consumer_tag) == 0) // Vez do cliente :)
     {
-      printf("é sua vez :)\n");
+      //printf("é sua vez :)\n");
       break;
     }
   }
@@ -380,15 +384,16 @@ int do_SUBSCRIBED(client_thread *data, server_data* _server_data)
   return 0;
 }
 
-// Vez do cliente de consumir uma mensagem da sua fila. Servidor manda um Basic.Deliver contendo a mensagem e faz o round robin
-int do_MY_TURN(client_thread *data, server_data* _server_data)
+// Vez do cliente de consumir uma mensagem da sua fila. Servidor manda um Basic.Deliver contendo a mensagem e faz o round robin.
+
+int do_CLIENT_TURN(client_thread *data, server_data* _server_data)
 {
-  char consumer_tag[MAXLINE];
-  sprintf(consumer_tag, "%lu", data->thread_id); // A consumer tag do cliente é o id da thread que gerencia a conexão
+  char client_consumer_tag[MAXLINE];
+  sprintf(client_consumer_tag, "%lu", data->thread_id); // A consumer tag do cliente é o id da thread que gerencia a conexão
 
   queue* q = _server_data->queue_list[data->client_queue];   // Fila que o cliente está inscrito
  
-  // Verifica se tem novas mensagens na fila
+  // Verifica se há novas mensagens na fila. Caso não tenha, volta para o estado SUBSCRIBED
 
   if(size_queue(q) == 0) return 1;  
 
@@ -398,19 +403,16 @@ int do_MY_TURN(client_thread *data, server_data* _server_data)
   dequeue_queue(_server_data->queue_list[data->client_queue], msg);
 
   // Envia o Basic.Deliver com a mensagem
-  int n = basic_deliver(data->buf, (unsigned char*) msg, strlen(msg), consumer_tag, q->name);
+  int n = basic_deliver(data->buf, (unsigned char*) msg, strlen(msg), client_consumer_tag, q->name);
   write(data->connfd, data->buf, n);
 
   printf("Basic.Deliver enviado\n");
 
-  // Faz o round robin
-  queue* q_client = _server_data->client_queue[data->client_queue]; // Fila de clientes da fila que está incrito
-  printf("1\n");
-  char nullbuf[MAX_MSG_LENGTH];
-  dequeue_queue(q_client, nullbuf);
-  printf("2\n");
-  enqueue_queue(q_client, consumer_tag);
-  printf("3\n");
+  // Faz o round robin da fila. Basicamente, desempilha e empilha o cliente na fila de clientes da lista.
+  queue* q_client = _server_data->client_queue[data->client_queue]; // Fila de clientes da fila que o cliente está inscrito
+  char buf[MAX_MSG_LENGTH];
+  dequeue_queue(q_client, buf);
+  enqueue_queue(q_client, client_consumer_tag);
 
   return 0;
 }
