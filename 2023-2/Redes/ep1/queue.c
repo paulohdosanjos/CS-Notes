@@ -47,6 +47,14 @@ void dequeue_queue(queue* q, char* buf)
   q->size--;
 }
 
+// Guarda em dst o primeiro elemento da fila. Quem a chama deve se certificar que a fila não está vazia primeiramente.
+void first_queue (queue* q, char* dst)
+{
+  memcpy(dst, q->first->message, strlen(q->first->message));
+}
+
+int size_queue (queue* q) { return q->size; }
+
 // Deleta fila q
 void remove_queue(queue* q)
 {

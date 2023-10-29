@@ -17,8 +17,10 @@
 #include "utils.h"
 #include "hardcoded.h"
 
-// Lista global de filas do servidor
+// Informações globais do servidor compartilhadas por todas as threads 
 server_data _server_data;
+pthread_mutex_t mutex_server_data; // Mutex para controlar acesso às informações globais do servidor
+
 
 void *handle_client(void* __client_thread) 
 {
@@ -85,10 +87,10 @@ int main (int argc, char **argv) {
     printf("[Para finalizar, pressione CTRL+c ou rode um kill ou killall]\n");
 
     _server_data = *((server_data *) malloc(sizeof(server_data)));
-    printf("lista de filas alocada com sucesso\n");
+    _server_data.num_consumers = 0;
+    printf("Estrutura de informações globais alocada com sucesso\n");
 
-    for (int thread_count = 0; ; thread_count = (thread_count + 1) % MAX_CLIENTS) {
-      
+    for (int thread_count = 0; ; thread_count += 1) {
       
       if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
           perror("accept :(\n");

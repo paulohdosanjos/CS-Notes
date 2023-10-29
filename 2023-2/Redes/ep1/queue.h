@@ -42,5 +42,11 @@ void remove_queue(queue* q);
 // Imprime fila
 void print_queue(queue* q);
 
+// Escreve em dst a primeira mensagem da fila
+void first_queue(queue* q, char* dst);
+
+// Retorna tamanho atual da fila
+int size_queue (queue* q);
+
 #endif
 

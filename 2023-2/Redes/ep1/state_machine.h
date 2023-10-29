@@ -53,6 +53,10 @@ int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data*);
 
 int do_RCVD_BASIC_CONSUME (client_thread* data, server_data*);
 
+int do_SUBSCRIBED (client_thread* data, server_data*);
+
+int do_MY_TURN (client_thread* data, server_data*);
+
 int do_WAIT_BASIC_ACK (client_thread* data, server_data*);
 
 int do_WAIT_CHANNEL_CLOSE (client_thread* data, server_data*);

@@ -16,6 +16,8 @@ int (*actions[NUM_STATES])(client_thread*, server_data*) = {
   do_RCVD_QUEUE_DECLARE, 
   do_RCVD_BASIC_PUBLISH,
   do_RCVD_BASIC_CONSUME,
+  do_SUBSCRIBED,
+  do_MY_TURN,
   do_WAIT_BASIC_ACK,
   do_WAIT_CHANNEL_CLOSE, 
   do_RCVD_CHANNEL_CLOSE, 
@@ -37,8 +39,10 @@ state transitions[NUM_STATES][MAX_TRANSITIONS] = {
   {RCVD_QUEUE_DECLARE, RCVD_BASIC_PUBLISH, RCVD_BASIC_CONSUME}, // WAIT_COMMAND, 
   {WAIT_CHANNEL_CLOSE}, // RCVD_QUEUE_DECLARE, 
   {WAIT_CHANNEL_CLOSE, RCVD_CONNECTION_CLOSE}, // RCVD_BASIC_PUBLISH, 
-  {WAIT_BASIC_ACK}, // RCVD_BASIC_CONSUME, 
-  {FINAL}, // WAIT_BASIC_ACK, 
+  {SUBSCRIBED}, // RCVD_BASIC_CONSUME, 
+  {MY_TURN}, // SUBSCRIBED, 
+  {WAIT_BASIC_ACK, SUBSCRIBED}, // MY_TURN, 
+  {SUBSCRIBED}, // WAIT_BASIC_ACK, 
   {RCVD_CHANNEL_CLOSE}, // WAIT_CHANNEL_CLOSE, 
   {WAIT_CONNECTION_CLOSE}, // RCVD_CHANNEL_CLOSE, 
   {RCVD_CONNECTION_CLOSE}, // WAIT_CONNECTION_CLOSE,
@@ -60,6 +64,8 @@ char* state_name[NUM_STATES] = {
   "RCVD_QUEUE_DECLARE", 
   "RCVD_BASIC_PUBLISH", 
   "RCVD_BASIC_CONSUME", 
+  "SUBSCRIBED", 
+  "MY_TURN", 
   "WAIT_BASIC_ACK", 
   "WAIT_CHANNEL_CLOSE", 
   "RCVD_CHANNEL_CLOSE", 
@@ -296,7 +302,7 @@ int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
   else return 0;
 }
 
-// Servidor envia Basic.Consume-Ok e Basic.Deliver com a mensagem a ser consumida pelo cliente.
+// Servidor inscreve cliente na fila requerida e envia Basic.Consume-Ok. 
 int do_RCVD_BASIC_CONSUME (client_thread* data, server_data* _server_data)
 {
   // Extrai nome da fila a partir do pacote do cliente Basic.Consume
@@ -308,29 +314,105 @@ int do_RCVD_BASIC_CONSUME (client_thread* data, server_data* _server_data)
   printf("Nome da fila extraído : ");
   puts(routing_key);
 
+  // Inscreve cliente nessa fila. Primeiramente, acha índice dessa listana lista de filas
+
+  int i;
+  for(i = 0; i < _server_data->queue_list_size; i++)
+    if(strcmp(_server_data->queue_list[i]->name, routing_key) == 0) break;
+
+  data->client_queue = i; // Guarda em qual fila cliente está inscrito
+  _server_data->num_consumers++;
+
+
+  if(_server_data->client_queue[i] == NULL) // Ainda não foi criada a lista de clientes dessa fila
+  {
+    _server_data->client_queue[i] = create_queue("foo");
+    printf("não tinha ninguém inscrito nessa fila ainda, fila de clientes alocada\n");
+  }
+
+  char consumer_tag[MAXLINE];
+  sprintf(consumer_tag, "%lu", data->thread_id); // A consumer tag do cliente vai ser o id da thread que gerencia a conexão
+
+  printf("a consumer_tag desse cliente é %s\n", consumer_tag);
+
+  enqueue_queue(_server_data->client_queue[i], consumer_tag);
+
+  printf("cliente inscrito na fila %d de nome %s\n", i, _server_data->queue_list[i]->name);
+  printf("número total de consumidores no servidor = %d\n", _server_data->num_consumers);
+
   // Envia o Basic.Consume-Ok
   int n;
-  char* consumer_tag = "foo_consumer";
+   
   n = basic_consume_ok(data->buf, consumer_tag);
   write(data->connfd, data->buf, n);
 
   printf("Basic.Consume-Ok enviado\n");
 
+  return 0; 
+}
+
+// Servidor verifica se é a vez do cliente de consumir uma mensagem da fila que ele está inscrito. Fica em loop verificando essa condição até que ela seja verdadeira e o servidor transite para o MY_TURN, onde o cliente receberá a mensagem
+
+int do_SUBSCRIBED(client_thread *data, server_data* _server_data)
+{
+  while(1)
+  {
+    // Verifica se é sua vez de consumir
+    queue* q = _server_data->queue_list[data->client_queue]; // Fila que o cliente está inscrito
+    printf("fila que esse cliente está inscrito : %s\n", q->name);
+    char buf[MAX_MSG_LENGTH]; // Consumer tag do próximo cliente a consumir na fila q
+    memset(buf, 0, MAX_MSG_LENGTH);
+    queue* q_client = _server_data->client_queue[data->client_queue];
+    if(size_queue(q_client) == 0) printf("putz\n");
+    first_queue(q_client, buf);
+
+    printf("o próximo cliente a consumir nessa fila é : %s\n", buf);
+    char consumer_tag[MAX_MSG_LENGTH];
+    memset(consumer_tag, 0, MAX_MSG_LENGTH);
+    sprintf(consumer_tag, "%lu", data->thread_id);
+    if(strcmp(buf, consumer_tag) == 0) // Vez do cliente :)
+    {
+      printf("é sua vez :)\n");
+      break;
+    }
+  }
+
+  return 0;
+}
+
+// Vez do cliente de consumir uma mensagem da sua fila. Servidor manda um Basic.Deliver contendo a mensagem e faz o round robin
+int do_MY_TURN(client_thread *data, server_data* _server_data)
+{
+  char consumer_tag[MAXLINE];
+  sprintf(consumer_tag, "%lu", data->thread_id); // A consumer tag do cliente é o id da thread que gerencia a conexão
+
+  queue* q = _server_data->queue_list[data->client_queue];   // Fila que o cliente está inscrito
+ 
+  // Verifica se tem novas mensagens na fila
+
+  if(size_queue(q) == 0) return 1;  
+
   // Desempilha mensagem da fila
   
-  int i;
-  for(i = 0; i < _server_data->queue_list_size; i++)
-    if(strcmp(_server_data->queue_list[i]->name, routing_key) == 0) break;
   char msg[MAXLINE];
-  dequeue_queue(_server_data->queue_list[i], msg);
+  dequeue_queue(_server_data->queue_list[data->client_queue], msg);
 
-  // Envia o Basic.Deliver
-  n = basic_deliver(data->buf, (unsigned char*) msg, strlen(msg), consumer_tag, routing_key);
+  // Envia o Basic.Deliver com a mensagem
+  int n = basic_deliver(data->buf, (unsigned char*) msg, strlen(msg), consumer_tag, q->name);
   write(data->connfd, data->buf, n);
 
   printf("Basic.Deliver enviado\n");
 
-  return 0; 
+  // Faz o round robin
+  queue* q_client = _server_data->client_queue[data->client_queue]; // Fila de clientes da fila que está incrito
+  printf("1\n");
+  char nullbuf[MAX_MSG_LENGTH];
+  dequeue_queue(q_client, nullbuf);
+  printf("2\n");
+  enqueue_queue(q_client, consumer_tag);
+  printf("3\n");
+
+  return 0;
 }
 
 // Servidor bloqueia até receber um Basic.Ack do cliente. Não valida.
