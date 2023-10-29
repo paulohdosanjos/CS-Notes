@@ -26,7 +26,6 @@
 extern int (*actions[NUM_STATES])(client_thread*, server_data*);
 extern state transitions[NUM_STATES][MAX_TRANSITIONS];
 extern char* state_name[NUM_STATES];
-extern const unsigned char DEFAULT_PROTOCOL_HEADER[];
 
 int do_WAIT_HEADER (client_thread* data, server_data*);
 

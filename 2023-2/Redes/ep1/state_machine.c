@@ -1,8 +1,6 @@
 #include "state_machine.h"
 #include "utils.h"
-
-const unsigned char DEFAULT_PROTOCOL_HEADER[] = "\x41\x4d\x51\x50\x00\x00\x09\x01";
-
+#include "hardcoded.h"
 
 int (*actions[NUM_STATES])(client_thread*, server_data*) = {
   do_WAIT_HEADER,
@@ -70,33 +68,30 @@ char* state_name[NUM_STATES] = {
   "FINAL"
 };
 
-// Servidor espera o protocol header do cliente e o valida. Retorna 1 se tudo deu certo e o protocolo é válido, retorna 0 caso contrário
+// Servidor bloqueia até receber o protocol header do cliente. Não valida o protocolo.
+
 int do_WAIT_HEADER (client_thread* data, server_data* _server_data)
 {
   read_header(data->connfd, data->buf);
 
   printf("Protocol Header recebido\n");
 
-  if(memcmp(data->buf, DEFAULT_PROTOCOL_HEADER, sizeof(DEFAULT_PROTOCOL_HEADER)) == 0) return 0;
-  else 
-  { 
-    printf("Protocolo inválido\n");
-    return 1;
-  }
+  return 0;
 }
 
-// Servidor manda um Connection.Start para o cliente
+// Servidor manda um Connection.Start para o cliente. HARDCODED.
+
 int do_RCVD_HEADER (client_thread* data, server_data* _server_data)
 {
-    int n = connection_start(data->buf);
-    write(data->connfd, data->buf, n);
+    write(data->connfd, CONNECTION_START_FRAME, CONNECTION_START_FRAME_SIZE);
 
     printf("Connection.Start enviado\n");
 
     return 0;
 }
 
-// Servidor espera um Connection.Start-Ok do cliente
+// Servidor bloqueia até receber um Connection.Start-Ok do cliente. Não valida.
+
 int do_WAIT_START_OK (client_thread* data, server_data* _server_data)
 {
   read_frame(data->connfd, data->buf);
@@ -105,19 +100,19 @@ int do_WAIT_START_OK (client_thread* data, server_data* _server_data)
   return 0;
 }
 
-// Servidor manda um Connection.Tune para o cliente
+// Servidor manda um Connection.Tune para o cliente. HARDCODED.
+
 int do_RCVD_START_OK (client_thread* data, server_data* _server_data)
 {
-  int n;
-  n = connection_tune(data->buf);
-  write(data->connfd, data->buf, n);
+  write(data->connfd, CONNECTION_TUNE_FRAME, CONNECTION_TUNE_FRAME_SIZE);
 
   printf("Connection.Tune enviado\n");
 
   return 0;
 }
 
-// Servidor espera um Connection.Tune-Ok do cliente. Como logo em seguida ele deverá receber um Connection.Open, é possível que essa ação leia os dois comandos de uma vez. Retorna 1 caso isso aconteça e 0 caso contrário
+// Servidor bloqueia até receber um Connection.Tune-Ok do cliente. Não valida. Como logo em seguida ele deverá receber um Connection.Open, é possível que o socketcontenha os dois. Retorna 1 nesse caso e 0 caso contrário. 
+
 int do_WAIT_TUNE_OK (client_thread* data, server_data* _server_data)
 {
 
@@ -125,7 +120,7 @@ int do_WAIT_TUNE_OK (client_thread* data, server_data* _server_data)
 
   printf("Connection.Tune-Ok recebido\n");
 
-  int count = 0; // Contará quantos frames amqp foram enviados pelo cliente
+  int count = 0; // Quantos frames amqp foram enviados pelo cliente ?
   for(int i = 0; i < bytes_read; i++) if(data->buf[i] == FRAME_END) count++; 
 
   if(count == 2) 
@@ -134,7 +129,8 @@ int do_WAIT_TUNE_OK (client_thread* data, server_data* _server_data)
   return count - 1;
 }
 
-// Servidor recebe Connection.Open do cliente
+// Servidor bloqueia até receber um Connection.Open do cliente. Não valida.
+
 int do_WAIT_CONNECTION_OPEN (client_thread* data, server_data* _server_data)
 {
   int bytes_read = read_frame(data->connfd, data->buf);
@@ -142,19 +138,19 @@ int do_WAIT_CONNECTION_OPEN (client_thread* data, server_data* _server_data)
   return 0;
 }
 
-// Servidor envia Connection.Open-Ok para o cliente
+// Servidor envia Connection.Open-Ok para o cliente. HARDCODED.
+
 int do_RCVD_CONNECTION_OPEN (client_thread* data, server_data* _server_data)
 {
-  int n;
-  n = connection_open_ok(data->buf);
-  write(data->connfd, data->buf, n);
+  write(data->connfd, CONNECTION_OPEN_OK_FRAME, CONNECTION_OPEN_OK_FRAME_SIZE);
 
   printf("Connection.Open-Ok enviado\n");
 
   return 0;
 }
 
-// Servidor recebe Channel.Open do cliente
+// Servidor bloqueia até receber um Channel.Open do cliente. Não valida.
+
 int do_WAIT_CHANNEL_OPEN (client_thread* data, server_data* _server_data)
 {
   int bytes_read = read_frame(data->connfd, data->buf);
@@ -164,25 +160,27 @@ int do_WAIT_CHANNEL_OPEN (client_thread* data, server_data* _server_data)
   return 0;
 }
 
-// Servidor envia Channel.Open-Ok para o cliente
-int do_RCVD_CHANNEL_OPEN(client_thread* data, server_data* _server_data)
+// Servidor envia Channel.Open-Ok para o cliente. HARDCODED.
+
+int do_RCVD_CHANNEL_OPEN (client_thread* data, server_data* _server_data)
 {
-  int n;
-  n = channel_open_ok(data->buf);
-  write(data->connfd, data->buf, n);
+  write(data->connfd, CHANNEL_OPEN_OK_FRAME, CHANNEL_OPEN_OK_FRAME_SIZE);
 
   printf("Channel.Open-Ok enviado\n");
 
   return 0;
 }
 
-// Nesse estado, o servidor pode receber um declare_queue, publish ou consume
-int do_WAIT_COMMAND (client_thread* data, server_data* _server_data) {
+// Nesse estado, o servidor bloqueia até receber um declare_queue, publish ou consume. Não trata outros comandos. 
+
+int do_WAIT_COMMAND (client_thread* data, server_data* _server_data) 
+{
   int bytes_read = read_frame(data->connfd, data->buf);
   data->bytes_read = bytes_read;
 
-  unsigned short int method_id = data->buf[METHOD_ID_POSITION];
-  // Faz transição interna
+  // Extrai método do frame
+  unsigned short int method_id = data->buf[METHOD_ID_POSITION]; 
+
   switch (method_id) 
   {
     case DECLARE_ID:
@@ -201,13 +199,14 @@ int do_WAIT_COMMAND (client_thread* data, server_data* _server_data) {
       break;
 
     default:
-      return 3;
+      return 3; // O servidor deve morrer aqui. Não há tratamento de erros nesse EP
       break;
   }
 }
 
-// Servidor cria nova fila e envia Queue.Declare-Ok para o cliente. Os dados da fila já estão em data->buf
-int do_RCVD_QUEUE_DECLARE(client_thread* data, server_data* _server_data)
+// Servidor cria nova fila e envia Queue.Declare-Ok para o cliente. Se o servidor está nesse estado, os dados da fila estão em data->buf devido ao comando Queue.Declare enviado pelo cliente
+
+int do_RCVD_QUEUE_DECLARE (client_thread* data, server_data* _server_data)
 {
   // Extrai nome da fila
   int queue_name_size = data->buf[QUEUE_NAME_LENGTH_OFFSET];
@@ -215,9 +214,9 @@ int do_RCVD_QUEUE_DECLARE(client_thread* data, server_data* _server_data)
   memcpy(queue_name, data->buf + QUEUE_NAME_LENGTH_OFFSET + 1, queue_name_size);
   queue_name[queue_name_size] = 0;
 
-  // Cria uma fila vazia com o nome requerido. Depois verificar se a fila existe
-  int is_present = FALSE;
+  // Verifica se a fila já está presente. Como teremos no máximo 8 filas a qualquer instante, é razoável procurar por filas pelo seu nome
 
+  int is_present = FALSE;
   for(int i = 0; i < _server_data->queue_list_size; i++) 
     if(strcmp(_server_data->queue_list[i]->name, queue_name) == 0) is_present = TRUE;
   
@@ -228,15 +227,11 @@ int do_RCVD_QUEUE_DECLARE(client_thread* data, server_data* _server_data)
     _server_data->queue_list[_server_data->queue_list_size-1] = q;
 
     printf("nova fila criada, num_filas = %d\n", _server_data->queue_list_size);
-    print_queue(_server_data->queue_list[_server_data->queue_list_size-1]);
-    //return 0;
   }
+  
+  // Envia Queue.Declare-Ok para o cliente
 
-  //else return 1; // Fila com esse nome já presente no servidor
-
-  int n;
-
-  n = queue_declare_ok(data->buf, queue_name);
+  int n = queue_declare_ok(data->buf, queue_name);
   write(data->connfd, data->buf, n);
 
   printf("Queue.Declare-Ok enviado\n");
@@ -244,13 +239,14 @@ int do_RCVD_QUEUE_DECLARE(client_thread* data, server_data* _server_data)
   return 0;
 }
 
-// Servidor recebeu um Basic.Publish. Escreve mensagem na fila somente. Pode ter rebebido um Channel.Close também
+// Servidor recebeu um Basic.Publish. Escreve mensagem na fila somente. Pode ter rebebido um Channel.Close também. Não trata erros do tipo, fila inexistente, etc.Outro ponto importante é que aqui assumimos que a mensagem será enviada em somente um Content Body. Isso é verdade para o limite do tamanho das mensagens estabelecido. Mas um programa mais robusto deveria verificar isso.
+
 int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
 {
   int n;
-  char* exchange_name = "foo"; // Não usamos exchanges. Se o cliente não especificar nenhum exchange, esse campo será 0x00 no frame. Estamos pressupondo esse padrão aqui.
+  char* exchange_name = "foo"; // Não usamos exchanges. Se o cliente não especificar nenhum exchange, esse campo será 0x00 no frame. Estamos pressupondo isso aqui.
 
-  // Extrai nome da fila
+  // Extrai nome da fila 
   char routing_key[MAXLINE];
   int routing_key_size = data->buf[ROUTING_KEY_SIZE_POSITION];
   memcpy(routing_key, data->buf + ROUTING_KEY_SIZE_POSITION + 1, routing_key_size);
@@ -260,34 +256,29 @@ int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
   puts(routing_key);
 
   // Extrai mensagem
-  int count = 0;
-  int i;
-  for(i = 0; i < data->bytes_read && count < 2; i++) // Extrai Method frame e o content header, o restante é o content body
-  {
-    if(data->buf[i] == FRAME_END) count++;   
-  }
 
-  i+=3; // Começo do length do content body
-  unsigned char a,b,c,d;
-  a = data->buf[i++];
-  b = data->buf[i++];
-  c = data->buf[i++];
-  d = data->buf[i++];
-  printf("a = %d\n", a);
-  printf("b = %d\n", b);
-  printf("c = %d\n", c);
-  printf("d = %d\n", d);
-  int content_body_length = d + (c << 2) + (b << 4) + (a << 6);
-  printf("content length = %d\n", content_body_length);
+  int count = 0;
+
+  // Pula o Method frame e o Content header, o restante é o Content body
+  int i;
+  for(i = 0; i < data->bytes_read && count < 2; i++) 
+    if(data->buf[i] == FRAME_END) count++;   
+  
+  i+=3; // i aponta para o começo do campo length do Content body
+
+  // Extrai tamanho do Content body
+
+  int content_body_length = 0;
+  content_body_length += data->buf[i++] << 6;
+  content_body_length += data->buf[i++] << 4;
+  content_body_length += data->buf[i++] << 2;
+  content_body_length += data->buf[i++];
 
   // Recupera mensagem
   char msg[MAX_MSG_LENGTH];
-  for(int j = 0; j < content_body_length; j++) 
-    msg[j] = data->buf[i+j];
-  
+  memcpy(msg, data->buf + i, content_body_length);
   msg[content_body_length] = 0;
 
-  // Como só há 8 filas, posso percorrer a lista de filas para achar a fila correspondente
   for(i = 0; i < _server_data->queue_list_size; i++)
     if(strcmp(_server_data->queue_list[i]->name, routing_key) == 0) break;
 
@@ -295,20 +286,17 @@ int do_RCVD_BASIC_PUBLISH (client_thread* data, server_data* _server_data)
 
   printf("Mensagem publicada na fila %s\n", _server_data->queue_list[i]->name);
 
+  // Agora, vamos verificar se o Channel.Close foi lido junto no socket. Supomos que o Basic.Publish veio em 3 frames
   count = 0;
-  for(i = 0; i < data->bytes_read; i++) // Extrai Method frame e o content header, o restante é o content body
-  {
+  for(i = 0; i < data->bytes_read; i++)
     if(data->buf[i] == FRAME_END) count++;   
-  }
 
-  printf("count = %d\n", count);
-
-  if(count == 4) // Recebeu Channel.Close junto
+  if(count == 4) // Leu Channel.Close junto
    return 1;
   else return 0;
 }
 
-// Servidor envia Basic.Consume-Ok e Basic.Deliver
+// Servidor envia Basic.Consume-Ok e Basic.Deliver com a mensagem a ser consumida pelo cliente.
 int do_RCVD_BASIC_CONSUME (client_thread* data, server_data* _server_data)
 {
   // Extrai nome da fila a partir do pacote do cliente Basic.Consume
@@ -322,23 +310,19 @@ int do_RCVD_BASIC_CONSUME (client_thread* data, server_data* _server_data)
 
   // Envia o Basic.Consume-Ok
   int n;
-  char* consumer_tag = "foo_consgumer";
+  char* consumer_tag = "foo_consumer";
   n = basic_consume_ok(data->buf, consumer_tag);
   write(data->connfd, data->buf, n);
 
   printf("Basic.Consume-Ok enviado\n");
 
-  // Desempilha mensagem da fila requerida
+  // Desempilha mensagem da fila
   
-  // Como só há 8 filas, posso percorrer a lista de filas para achar a fila correspondente
-
   int i;
   for(i = 0; i < _server_data->queue_list_size; i++)
     if(strcmp(_server_data->queue_list[i]->name, routing_key) == 0) break;
   char msg[MAXLINE];
   dequeue_queue(_server_data->queue_list[i], msg);
-
-  printf("Mensagem resgatada na fila %s\n", msg);
 
   // Envia o Basic.Deliver
   n = basic_deliver(data->buf, (unsigned char*) msg, strlen(msg), consumer_tag, routing_key);
@@ -349,13 +333,17 @@ int do_RCVD_BASIC_CONSUME (client_thread* data, server_data* _server_data)
   return 0; 
 }
 
-// Servidor recebe Basic.Ack do cliente
+// Servidor bloqueia até receber um Basic.Ack do cliente. Não valida.
 int do_WAIT_BASIC_ACK (client_thread* data, server_data* _server_data)
 {
+  int bytes_read = read_frame(data->connfd, data->buf);
 
+  printf("Basic.Ack recebido\n");
+
+  return 0;
 }
 
-// Servidor recebe Channel.Close do cliente
+// Servidor bloqueia até receber um Channel.Close do cliente. Não valida.
 int do_WAIT_CHANNEL_CLOSE (client_thread* data, server_data* _server_data)
 {
   int bytes_read = read_frame(data->connfd, data->buf);
@@ -365,19 +353,17 @@ int do_WAIT_CHANNEL_CLOSE (client_thread* data, server_data* _server_data)
   return 0;
 }
 
-// Servidor manda Channel.Close-Ok para o cliente
+// Servidor manda Channel.Close-Ok para o cliente. HARDCODED.
 int do_RCVD_CHANNEL_CLOSE (client_thread* data, server_data* _server_data)
 {
-  int n;
-  n = channel_close_ok(data->buf);
-  write(data->connfd, data->buf, n);
+  write(data->connfd, CHANNEL_CLOSE_OK_FRAME, CHANNEL_CLOSE_OK_FRAME_SIZE);
 
   printf("Channel.Close-Ok enviado\n");
 
   return 0;
 }
 
-// Servidor recebe Connection.Close do cliente
+// Servidor bloqueia até receber um Connection.Close do cliente. Não valida.
 int do_WAIT_CONNECTION_CLOSE (client_thread* data, server_data* _server_data)
 {
   int bytes_read = read_frame(data->connfd, data->buf);
@@ -387,16 +373,17 @@ int do_WAIT_CONNECTION_CLOSE (client_thread* data, server_data* _server_data)
   return 0;
 }
 
-// Servidor manda Channel.Close-Ok para o cliente
+// Servidor manda Connection.Close-Ok para o cliente. HARDCODED.
 int do_RCVD_CONNECTION_CLOSE (client_thread* data, server_data* _server_data)
 {
-  int n;
-  n = connection_close_ok(data->buf);
-  write(data->connfd, data->buf, n);
+  write(data->connfd, CONNECTION_CLOSE_OK_FRAME, CONNECTION_CLOSE_OK_FRAME_SIZE);
 
   printf("Connection.Close-Ok enviado\n");
 
   return 0;
 }
 
-int do_FINAL (client_thread* data, server_data* _server_data){return 0;}
+int do_FINAL (client_thread* data, server_data* _server_data)
+{
+  return 0;
+}

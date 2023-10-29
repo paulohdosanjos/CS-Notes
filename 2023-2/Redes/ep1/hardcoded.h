@@ -1,13 +1,18 @@
-const extern unsigned char CONNECTION_START_FRAME[];
+extern const unsigned char CONNECTION_START_FRAME[];
+extern const unsigned long int CONNECTION_START_FRAME_SIZE;
 
-const extern unsigned char CONNECTION_TUNE_FRAME[];
+extern const unsigned char CONNECTION_TUNE_FRAME[];
+extern const unsigned long int CONNECTION_TUNE_FRAME_SIZE;
 
-const extern unsigned char CONNECTION_OPEN_OK_FRAME[];
+extern const unsigned char CONNECTION_OPEN_OK_FRAME[];
+extern const unsigned long int CONNECTION_OPEN_OK_FRAME_SIZE;
 
-const extern unsigned char CONNECTION_CLOSE_OK_FRAME[];
+extern const unsigned char CONNECTION_CLOSE_OK_FRAME[];
+extern const unsigned long int CONNECTION_CLOSE_OK_FRAME_SIZE;
 
-const extern unsigned char CHANNEL_OPEN_OK_FRAME[];
+extern const unsigned char CHANNEL_OPEN_OK_FRAME[];
+extern const unsigned long int CHANNEL_OPEN_OK_FRAME_SIZE;
 
-const extern unsigned char CHANNEL_CLOSE_OK_FRAME[];
+extern const unsigned char CHANNEL_CLOSE_OK_FRAME[];
+extern const unsigned long int CHANNEL_CLOSE_OK_FRAME_SIZE;
 
-const extern unsigned char DEFAULT_PROTOCOL_HEADER[];
