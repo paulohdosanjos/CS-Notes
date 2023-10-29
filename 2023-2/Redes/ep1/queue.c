@@ -35,7 +35,7 @@ void enqueue_queue(queue* q, char* msg)
 // Desempilha primeira mensagem da fila q e salva em buf
 void dequeue_queue(queue* q, char* buf)
 {
-  if(q->size == 0) return; // Quero isso ?
+  if(q->size == 0) return; // Se não tiver mensagens publicadas na fila, servidor só retorna
 
   node* new_first = q->first->next;
 

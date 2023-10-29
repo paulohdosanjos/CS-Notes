@@ -204,7 +204,7 @@ int do_WAIT_COMMAND (client_thread* data, server_data* _server_data)
   }
 }
 
-// Servidor cria nova fila e envia Queue.Declare-Ok para o cliente. Se o servidor está nesse estado, os dados da fila estão em data->buf devido ao comando Queue.Declare enviado pelo cliente
+// Servidor cria nova fila e envia Queue.Declare-Ok para o cliente. Se o servidor está nesse estado, os dados da fila estão em data->buf devido ao comando Queue.Declare enviado pelo cliente. Caso alguma fila com esse nome já exista, o servidor retorna apenas.
 
 int do_RCVD_QUEUE_DECLARE (client_thread* data, server_data* _server_data)
 {

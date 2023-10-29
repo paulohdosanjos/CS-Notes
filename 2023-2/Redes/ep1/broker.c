@@ -15,12 +15,10 @@
 #include "server_config.h"
 #include "state_machine.h"
 #include "utils.h"
+#include "hardcoded.h"
 
 // Lista global de filas do servidor
 server_data _server_data;
-
-//server_data* _server_data = (server_data*) malloc(sizeof(server_data));
-//_server_data->queue_list_size = 0;
 
 void *handle_client(void* __client_thread) 
 {
